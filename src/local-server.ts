@@ -9,7 +9,7 @@
  * SHA-256 hash-chained audit event for every promotion.
  *
  * Tool surface (matches the brain / brain-save skills exactly):
- *   READ : brain_search, brain_status
+ *   READ : brain_search, brain_status, brain_audit_verify
  *   WRITE: brain_capture, brain_govern, brain_transition
  */
 import { randomUUID } from 'node:crypto';
@@ -30,7 +30,7 @@ import type { MemoryCandidate } from '@qmd-team-intent-kb/schema';
 import { resolveConfig } from './config.js';
 import { runGovern } from './govern.js';
 
-const VERSION = '0.1.0';
+const VERSION = '0.1.4';
 const config = resolveConfig();
 
 const CATEGORIES = [
