@@ -30,7 +30,7 @@ import type { MemoryCandidate } from '@qmd-team-intent-kb/schema';
 import { resolveConfig } from './config.js';
 import { runGovern } from './govern.js';
 
-const VERSION = '0.1.5';
+const VERSION = '0.1.6';
 const config = resolveConfig();
 
 const CATEGORIES = [

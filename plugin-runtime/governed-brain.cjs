@@ -38794,7 +38794,7 @@ async function runGovern(config2) {
 }
 
 // src/local-server.ts
-var VERSION = "0.1.5";
+var VERSION = "0.1.6";
 var config = resolveConfig();
 var CATEGORIES = [
   "decision",
