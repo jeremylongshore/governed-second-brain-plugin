@@ -1,6 +1,6 @@
 {
   "name": "governed-second-brain",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Local-first governed second brain — a Claude Code + Cowork plugin + installer. Turn your own files into cited (qmd://) memory with deterministic governance and a tamper-evident, hash-chained audit trail. Runs in-process; no daemon, no network for retrieval.",
   "keywords": ["mcp", "claude-code", "cowork", "memory", "knowledge", "governance", "qmd", "citations", "local-first", "second-brain"],
   "license": "Apache-2.0",
@@ -10,7 +10,7 @@
   "type": "module",
   "files": [
     "bin",
-    "plugin-runtime",
+    "plugin-runtime/governed-brain.cjs",
     ".claude-plugin",
     "skills",
     ".mcp.json",
