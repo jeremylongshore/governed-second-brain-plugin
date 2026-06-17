@@ -131,6 +131,11 @@ function ensureNativeDep() {
 function checkQmd() {
   try {
     const v = execFileSync('qmd', ['--version'], { encoding: 'utf8' }).trim();
+    const m = v.match(/(\d+)\.\d+\.\d+/);
+    if (m && Number(m[1]) < 2) {
+      log(C.yellow(`  ⚠ ${v} is too old — retrieval needs qmd 2.x. Upgrade: https://github.com/tobi/qmd`));
+      return false;
+    }
     log(C.dim(`  qmd on PATH: ${v}`));
     return true;
   } catch {
