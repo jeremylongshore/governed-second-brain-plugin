@@ -1,0 +1,7 @@
+# Node / build (the bundled plugin-runtime/governed-brain.cjs IS tracked;
+# node_modules — including the vendored plugin-runtime/node_modules/better-sqlite3
+# that the installer provisions per-platform — is not)
+node_modules/
+*.tsbuildinfo
+.gsb-smoke/
+.gsb-repro/

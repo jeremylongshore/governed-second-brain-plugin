@@ -1,0 +1,16 @@
+{
+  "mcpServers": {
+    "governed-brain": {
+      "name": "governed-brain",
+      "description": "Local in-process governed second brain — cited search plus governed capture (capture → govern → promote) with a SHA-256 hash-chained audit trail. No daemon, no network.",
+      "version": "0.1.0",
+      "enabled": true,
+      "transport": "stdio",
+      "command": "node",
+      "args": ["${CLAUDE_PLUGIN_ROOT}/plugin-runtime/governed-brain.cjs"],
+      "env": {
+        "TEAMKB_TENANT_ID": "local"
+      }
+    }
+  }
+}

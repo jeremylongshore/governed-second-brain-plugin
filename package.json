@@ -1,0 +1,35 @@
+{
+  "name": "governed-second-brain",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Local-first governed second brain — the bundled MCP runtime for the Claude Code + Cowork plugin.",
+  "license": "Apache-2.0",
+  "author": "Jeremy Longshore <jeremy@intentsolutions.io>",
+  "type": "module",
+  "scripts": {
+    "build": "node build.mjs",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.29.0",
+    "better-sqlite3": "^12.10.0",
+    "zod": "^4.4.3"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": ["better-sqlite3", "esbuild"]
+  },
+  "devDependencies": {
+    "@qmd-team-intent-kb/common": "link:../qmd-team-intent-kb/packages/common",
+    "@qmd-team-intent-kb/store": "link:../qmd-team-intent-kb/packages/store",
+    "@qmd-team-intent-kb/schema": "link:../qmd-team-intent-kb/packages/schema",
+    "@qmd-team-intent-kb/policy-engine": "link:../qmd-team-intent-kb/packages/policy-engine",
+    "@qmd-team-intent-kb/qmd-adapter": "link:../qmd-team-intent-kb/packages/qmd-adapter",
+    "@qmd-team-intent-kb/claude-runtime": "link:../qmd-team-intent-kb/packages/claude-runtime",
+    "@qmd-team-intent-kb/curator": "link:../qmd-team-intent-kb/apps/curator",
+    "@qmd-team-intent-kb/git-exporter": "link:../qmd-team-intent-kb/apps/git-exporter",
+    "@types/better-sqlite3": "^7.6.11",
+    "@types/node": "^22.10.0",
+    "esbuild": "^0.28.1",
+    "typescript": "^5.7.0"
+  }
+}
