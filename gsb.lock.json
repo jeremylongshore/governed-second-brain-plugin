@@ -1,0 +1,41 @@
+{
+  "schemaVersion": 1,
+  "name": "gsb.lock",
+  "description": "Known-good version tuple for the Governed Second Brain stack — Compile (ICO) x Govern (INTKB) x Retrieve (qmd) x the plugin. The installer pins to these; CI (.github/workflows/smoke.yml) drives the full chain against them before release. Bump deliberately: never drift one component without re-running the smoke over the whole chain.",
+  "generatedFor": "governed-second-brain@0.1.4",
+  "stack": {
+    "plugin": {
+      "name": "governed-second-brain",
+      "version": "0.1.4",
+      "registry": "npm",
+      "role": "Claude Code + Cowork plugin — local stdio MCP (read + write) + the npx installer."
+    },
+    "compile": {
+      "name": "intentional-cognition-os",
+      "version": "1.14.0",
+      "registry": "npm",
+      "optional": true,
+      "role": "ICO — corpus -> governance spool (DeepSeek- or Anthropic-capable). The installer's --index-only mode skips it for a zero-egress build."
+    },
+    "govern": {
+      "name": "qmd-team-intent-kb",
+      "version": "0.6.0",
+      "commit": "f800797",
+      "registry": "bundled",
+      "role": "INTKB — deterministic dedupe -> policy -> promote + the SHA-256 hash-chained audit + external anchor. Private monorepo; compiled into plugin-runtime/governed-brain.cjs, never published to a registry."
+    },
+    "retrieve": {
+      "name": "qmd",
+      "npmPackage": "@tobilu/qmd",
+      "version": "2.0.1",
+      "acceptedRange": ">=2.0.0 <3.0.0",
+      "registry": "external-path",
+      "role": "tobi's qmd — on-device hybrid search (BM25 + vector + LLM rerank). External PATH prerequisite; every hit is a qmd:// citation. Govern degrades gracefully if absent (capture/promote/audit still complete; only the post-promote index refresh waits)."
+    }
+  },
+  "runtime": {
+    "node": ">=20",
+    "nativeDependency": { "name": "better-sqlite3", "acceptedRange": "^12.10.0" }
+  },
+  "verifiedBy": ".github/workflows/smoke.yml — capture -> govern -> audit-verify (hermetic, zero LLM egress) + best-effort qmd-cited search."
+}
