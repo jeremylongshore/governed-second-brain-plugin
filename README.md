@@ -62,19 +62,25 @@ external chain-head anchor (on the roadmap). It is **not** a blockchain and **no
 
 ## Install
 
-> **One-command install is in progress** (`npx governed-second-brain init <folder>` — pinned engines,
-> egress consent, a no-egress `--index-only` mode, native-dep provisioning). Until then, build locally:
+The **`init --index-only` flow works today** — it builds a governed, `qmd://`-cited, hash-chained-audited
+brain from a folder with **zero LLM egress** (capture → govern → index, fully local), vendors the native
+dep, and prints how to wire the MCP server into Claude Code:
 
 ```bash
-# requires the sibling ../qmd-team-intent-kb checkout (built) and qmd 2.x on PATH
+# one-time build (needs the sibling ../qmd-team-intent-kb checkout, built; qmd 2.x on PATH)
 pnpm -C ../qmd-team-intent-kb build   # the bundle inlines INTKB's compiled packages
-pnpm install                          # links the engine packages + installs better-sqlite3
-pnpm build                            # esbuild → plugin-runtime/governed-brain.cjs
-node smoke.mjs                        # capture → govern → search over the MCP protocol (isolated brain)
+pnpm install && pnpm build            # esbuild → plugin-runtime/governed-brain.cjs
+
+# build a brain from your notes — nothing leaves the machine
+node bin/init.mjs init <your-folder> --index-only
 ```
 
-The plugin registers a local stdio MCP server (`governed-brain`) over `~/.teamkb`; search runs
-in-process against your local qmd index, and govern degrades gracefully if qmd isn't on PATH.
+The plugin registers a local stdio MCP server (`governed-brain`) over `~/.teamkb`; search runs in-process
+against your local qmd index, and govern degrades gracefully if qmd isn't on PATH.
+
+**Coming:** the `npx governed-second-brain init <folder>` one-liner (npm publish + provenance), full
+ICO-compile mode (opt-in egress for richer derived knowledge), and automatic Claude Code / Cowork
+MCP registration.
 
 ## License
 

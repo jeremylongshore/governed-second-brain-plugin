@@ -6,6 +6,9 @@
   "license": "Apache-2.0",
   "author": "Jeremy Longshore <jeremy@intentsolutions.io>",
   "type": "module",
+  "bin": {
+    "governed-second-brain": "bin/init.mjs"
+  },
   "scripts": {
     "build": "node build.mjs",
     "typecheck": "tsc --noEmit"
