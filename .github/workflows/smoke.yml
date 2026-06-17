@@ -31,11 +31,14 @@ jobs:
       - name: Lockfile drift guard (gsb.lock.json vs the manifests)
         run: node smoke/check-lock.mjs
 
-      # Runtime needs: the MCP SDK (for the smoke client) + better-sqlite3 (the
-      # bundle's one external native dep). The committed bundle inlines INTKB, so
-      # no private-monorepo build is required.
+      # The committed bundle inlines INTKB, so CI never builds — and the build-only
+      # devDeps are `link:../qmd-team-intent-kb/*`, which don't exist here. Strip
+      # them, then install just the prod deps (the MCP SDK for the smoke client +
+      # better-sqlite3, the bundle's one external native dep).
       - name: Install runtime deps for the committed bundle
-        run: npm install --no-save @modelcontextprotocol/sdk@^1.29.0 better-sqlite3@^12.10.0
+        run: |
+          node -e "const p=require('./package.json'); delete p.devDependencies; require('fs').writeFileSync('package.json', JSON.stringify(p,null,2))"
+          npm install --no-audit --no-fund
 
       - name: Install pinned qmd (best-effort — enables the search assertion)
         continue-on-error: true
