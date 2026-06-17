@@ -24,9 +24,9 @@
 import { createInterface } from 'node:readline/promises';
 import { stdin, stdout } from 'node:process';
 import { homedir } from 'node:os';
-import { join, resolve, relative, dirname, extname } from 'node:path';
+import { join, resolve, relative, dirname, basename, extname } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { existsSync, rmSync, readFileSync, statSync, readdirSync } from 'node:fs';
+import { existsSync, rmSync, readFileSync, statSync, readdirSync, mkdirSync, copyFileSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js';
@@ -102,7 +102,7 @@ async function preflight(folder, args, fileCount) {
   if (args.indexOnly) {
     log(`    • ${C.green('send NOTHING over the network')} — index-only is fully local`);
   } else {
-    log(`    • ${C.yellow('SEND your file text to Anthropic')} (ICO compile) — this egresses`);
+    log(`    • ${C.yellow('SEND your file text to DeepSeek')} (ICO compile derives knowledge) — this egresses`);
   }
   log('');
   if (args.yes) return true;
@@ -167,6 +167,80 @@ async function buildBrain(folder, files, args) {
   return { captured, gov, status: st };
 }
 
+// Resolve the ICO CLI: local sibling checkout first (built), then `ico` on PATH,
+// then npx. Full-compile drives it with ICO_PROVIDER=deepseek.
+function resolveIco() {
+  const sibling = resolve(PLUGIN_ROOT, '..', 'intentional-cognition-os', 'packages', 'cli', 'dist', 'index.js');
+  if (process.env.GSB_ICO_CLI && existsSync(process.env.GSB_ICO_CLI)) {
+    return { cmd: 'node', base: [process.env.GSB_ICO_CLI], label: process.env.GSB_ICO_CLI };
+  }
+  if (existsSync(sibling)) return { cmd: 'node', base: [sibling], label: '../intentional-cognition-os (local)' };
+  try {
+    execFileSync('ico', ['--version'], { stdio: 'ignore' });
+    return { cmd: 'ico', base: [], label: 'ico (PATH)' };
+  } catch {
+    return { cmd: 'npx', base: ['-y', 'intentional-cognition-os@latest'], label: 'npx intentional-cognition-os' };
+  }
+}
+
+// Full-compile path: ICO derives knowledge from the folder (6 passes, on DeepSeek),
+// emits the spool, and brain_govern (the same in-process runtime) governs it.
+async function fullCompile(folder, args) {
+  const ico = resolveIco();
+  const ws = join(args.base, 'ico-workspace');
+  rmSync(ws, { recursive: true, force: true });
+  const icoEnv = { ...process.env, ICO_PROVIDER: 'deepseek' }; // DEEPSEEK_API_KEY already in env
+  const run = (a, opts = {}) =>
+    execFileSync(ico.cmd, [...ico.base, ...a], { stdio: ['ignore', 'ignore', 'inherit'], env: icoEnv, ...opts });
+
+  log('');
+  log(C.dim(`  ICO via ${ico.label} — provider: deepseek`));
+  log(C.dim('  ico init…'));
+  run(['init', basename(ws), '--path', dirname(ws)]);
+  log(C.dim('  ico mount + ingest…'));
+  run(['--workspace', ws, 'mount', 'add', 'corpus', folder]);
+  run(['--workspace', ws, 'ingest', folder, '--yes']);
+  log(C.yellow('  ico compile all (6 passes — sending content to DeepSeek)…'));
+  run(['--workspace', ws, 'compile', 'all'], { stdio: ['ignore', 'inherit', 'inherit'] });
+  log(C.dim('  ico spool emit…'));
+  run(['--workspace', ws, 'spool', 'emit', '--scope', 'all', '--tenant', args.tenant]);
+
+  // Hand the compiled spool to the brain's spool dir, then govern via the bundled MCP server.
+  const wsSpool = join(ws, 'spool');
+  const brainSpool = join(args.base, 'spool');
+  mkdirSync(brainSpool, { recursive: true });
+  let moved = 0;
+  if (existsSync(wsSpool)) {
+    for (const f of readdirSync(wsSpool)) {
+      if (f.startsWith('spool-') && f.endsWith('.jsonl')) {
+        copyFileSync(join(wsSpool, f), join(brainSpool, f));
+        moved++;
+      }
+    }
+  }
+  if (moved === 0) die('ICO compile produced no spool — nothing to govern (see the compile output above).');
+
+  const transport = new StdioClientTransport({
+    command: 'node',
+    args: [RUNTIME],
+    env: { ...process.env, TEAMKB_TENANT_ID: args.tenant, TEAMKB_BASE_PATH: args.base },
+  });
+  const client = new Client({ name: 'gsb-installer', version: '0.1.0' }, { capabilities: {} });
+  await client.connect(transport);
+  const text = (r) => {
+    try {
+      return JSON.parse(r.content?.[0]?.text ?? '{}');
+    } catch {
+      return {};
+    }
+  };
+  log(C.bold('  Governing the compiled spool…'));
+  const gov = text(await client.callTool({ name: 'brain_govern', arguments: {} }));
+  const status = text(await client.callTool({ name: 'brain_status', arguments: {} }));
+  await client.close();
+  return { captured: gov.ingested ?? 0, gov, status };
+}
+
 function hasClaude() {
   try { execFileSync('claude', ['--version'], { stdio: 'ignore' }); return true; } catch { return false; }
 }
@@ -224,11 +298,12 @@ async function main() {
   if (!args.base.startsWith(homedir())) die(`--base must be under your home directory (${homedir()})`);
   if (!existsSync(RUNTIME)) die(`bundled runtime missing at ${RUNTIME} — run "pnpm build" in the plugin repo first.`);
 
-  if (!args.indexOnly) {
-    log('');
-    log(C.yellow('  Full compile mode (ICO → derive knowledge, egresses to Anthropic) is not wired yet.'));
-    log(C.yellow('  Re-run with --index-only for the zero-egress path (capture → govern → index).'));
-    process.exit(2);
+  // Full compile mode egresses to DeepSeek — require the key up front (fail fast, before consent).
+  if (!args.indexOnly && !process.env.DEEPSEEK_API_KEY) {
+    die(
+      'full compile mode sends your file text to DeepSeek and needs DEEPSEEK_API_KEY.\n' +
+        '    export DEEPSEEK_API_KEY=…   — or use --index-only for the zero-egress path.',
+    );
   }
 
   const files = walkTextFiles(folder);
@@ -243,7 +318,9 @@ async function main() {
 
   ensureNativeDep();
   const qmdOk = checkQmd();
-  const { captured, gov, status } = await buildBrain(folder, files, args);
+  const { captured, gov, status } = args.indexOnly
+    ? await buildBrain(folder, files, args)
+    : await fullCompile(folder, args);
 
   log('  ' + C.dim('─'.repeat(58)));
   log(`  captured ${C.bold(captured)} · governed → ${C.green(`${gov.promoted ?? 0} promoted`)}, ` +
