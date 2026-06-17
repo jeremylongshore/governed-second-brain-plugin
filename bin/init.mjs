@@ -26,6 +26,7 @@ import { stdin, stdout } from 'node:process';
 import { homedir } from 'node:os';
 import { join, resolve, relative, dirname, basename, extname } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { createRequire } from 'node:module';
 import { existsSync, rmSync, readFileSync, statSync, readdirSync, mkdirSync, copyFileSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
@@ -110,6 +111,8 @@ async function preflight(folder, args, fileCount) {
 }
 
 function ensureNativeDep() {
+  // Already resolvable from the runtime (e.g. npx-installed it as a dependency)? Done.
+  try { createRequire(RUNTIME).resolve('better-sqlite3'); return; } catch {}
   const addon = join(RUNTIME_NM, 'better-sqlite3', 'build', 'Release', 'better_sqlite3.node');
   if (existsSync(addon)) return;
   // Resolve the version the bundle was built against.
@@ -179,7 +182,7 @@ function resolveIco() {
     execFileSync('ico', ['--version'], { stdio: 'ignore' });
     return { cmd: 'ico', base: [], label: 'ico (PATH)' };
   } catch {
-    return { cmd: 'npx', base: ['-y', 'intentional-cognition-os@latest'], label: 'npx intentional-cognition-os' };
+    return { cmd: 'npx', base: ['-y', 'intentional-cognition-os@^1.14.0'], label: 'npx intentional-cognition-os@^1.14.0' };
   }
 }
 
