@@ -64,6 +64,19 @@ The chain is tamper-**evident** (detection of edits/reordering), **not** tamper-
 edit an event *and* re-hash forward. Keep the "What the receipt does *not* do" framing honest.
 **Forbidden words:** tamper-proof, immutable, non-repudiation (for local mode), blockchain.
 
+## Retrieval roadmap (2026-06-18 council decision)
+
+`brain_search` uses **BM25** (`qmd search`) today — zero ML, cited hits. Semantic recall is
+**roadmapped, not shipped**: a *lean* native sqlite-vec backend on EmbeddingGemma-300M only
+(~320 MB), eval-gated, dropping qmd's 1.7 B query-expander + 0.6 B reranker. We **skip** qmd's
+2.2 GB hybrid (heavier *and* unwired) and **reject** the stale NEXUS RAG stack. Before any
+semantic path ships, the qmd binary + GGUF weights get **SHA-256-pinned (fail closed)** —
+`gsb.lock.json` already pins versions; weight-hash pinning extends that discipline.
+
+Canonical record: `qmd-team-intent-kb/000-docs/038-AT-DECR`; epic `qmd-team-intent-kb-0t9`
+(GH `jeremylongshore/qmd-team-intent-kb#170` / Plane INTKB-7). The plugin's semantic-recall
+bead `compile-then-govern-qy7.13` lands via `0t9.3`.
+
 ## Tracking
 
 Program-level beads + the GitHub tracking issue live on the **umbrella** repo
