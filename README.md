@@ -46,6 +46,7 @@ optional ICO *compile* step is the only thing that egresses, and it's opt-in).
 |---|---|---|
 | `brain_search` | read | Cited search over your governed memory (`qmd://` receipts), in-process |
 | `brain_status` | read | Counts by lifecycle state + category |
+| `brain_audit_verify` | read | Verify the audit trail — the SHA-256 hash chain **and** the external anchor log; flags any tamper |
 | `brain_capture` | write | Capture a fact as a governance **proposal** (to the local spool) |
 | `brain_govern` | write | Drain the spool → dedupe → policy → **promote**, with a hash-chained audit receipt — daemon-free |
 | `brain_transition` | write | Retire / re-lifecycle a memory (audited) |
@@ -89,8 +90,11 @@ node bin/init.mjs init <your-folder> --index-only
 ```
 </details>
 
-**Coming:** npm provenance + checksums (the `gsb.lock.json` reproducible pin) and
-automatic Cowork MCP registration.
+**Supply chain (shipped in 0.1.4):** npm **provenance** (via the CI release workflow) and the
+`gsb.lock.json` reproducible pin — the exact ICO × INTKB × qmd × plugin tuple, verified by a
+hermetic full-chain CI smoke against the pinned set.
+
+**Coming:** automatic Cowork MCP registration.
 
 ## License
 
