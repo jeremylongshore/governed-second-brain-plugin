@@ -8,16 +8,27 @@ installable Claude Code + Cowork plugin (a local stdio MCP server); the engines 
 
 ## [Unreleased]
 
+## [0.1.7] - 2026-06-20
+
+### Changed
+
+- Bundled govern engine re-pinned to **qmd-team-intent-kb v0.7.0** (`gsb.lock`, was v0.6.0) and the
+  runtime rebundled against it. This is an accuracy / sync release — v0.7.0's headline work (the
+  candidate-intake disclosure gate and the one-shot promote endpoint) is team/API-side and is not
+  part of the local single-user plugin's surface.
+
 ### Added
 
 - Governance scaffolding: `CONTRIBUTING.md`, `SECURITY.md`, `CODE_OF_CONDUCT.md`
   (Contributor Covenant 2.1), and this `CHANGELOG.md`.
+- `brain_audit_verify` documented in the README tool table (the server already registered it). (#4)
 - Retrieval roadmap recorded in the plugin guidance — `brain_search` stays BM25 (qmd search) now;
   a lean native sqlite-vec semantic path (EmbeddingGemma-300M) is eval-gated. (#1)
 
 ### Fixed
 
 - README footer link uses the canonical trailing-slash root (`intentsolutions.io/`). (#2)
+- README "Coming" no longer lists already-shipped npm provenance + the `gsb.lock` pin. (#4)
 
 ## [0.1.6]
 

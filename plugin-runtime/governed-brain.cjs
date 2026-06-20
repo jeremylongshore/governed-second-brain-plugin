@@ -37248,6 +37248,9 @@ var QmdAdapter = class {
   }
 };
 
+// ../qmd-team-intent-kb/packages/qmd-adapter/dist/native/fts5-backend.js
+var import_better_sqlite32 = __toESM(require("better-sqlite3"), 1);
+
 // ../qmd-team-intent-kb/packages/claude-runtime/dist/config.js
 var SPOOL_DIR = "spool";
 function getSpoolPath() {
