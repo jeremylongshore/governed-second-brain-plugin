@@ -43,6 +43,10 @@ the brain, and the only gate on a write is that you asked for it.
   with the capture + govern tools).
 - `qmd` is on your `PATH` so the govern step can refresh the search index after a promotion. If qmd is
   absent, capture + govern + the audit receipt still complete; only fresh-search visibility waits.
+- **This skill is the local-mode write path.** It runs when the plugin is in local mode (the default,
+  no `TEAMKB_API_URL`). In **team mode** the brain is governed centrally on the server — you read and
+  propose, and the server disposes — so the local capture/govern tools are not exposed; use `/brain` to
+  query the team brain.
 
 ## Instructions
 

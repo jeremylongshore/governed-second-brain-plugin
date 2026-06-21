@@ -1,4 +1,9 @@
-// Bundle the local governed-brain MCP server into a single self-contained .cjs.
+// Bundle the unified governed-brain MCP server into a single self-contained .cjs.
+//
+// The entry is the mode dispatcher (src/index.ts): it dynamic-imports the local
+// in-process server OR the remote (team) proxy by TEAMKB_API_URL. esbuild inlines
+// both modules (CJS, no splitting) into ONE file, lazily — at runtime only the
+// selected mode's module initializes, so team mode never touches better-sqlite3.
 //
 // Everything is inlined EXCEPT the one native module (better-sqlite3, which
 // ships a compiled .node addon and cannot be bundled) and its 'bindings' loader.
@@ -21,7 +26,7 @@ try {
 }
 
 await esbuild.build({
-  entryPoints: ['src/local-server.ts'],
+  entryPoints: ['src/index.ts'],
   bundle: true,
   platform: 'node',
   format: 'cjs',

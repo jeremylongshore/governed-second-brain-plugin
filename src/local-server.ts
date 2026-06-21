@@ -30,7 +30,7 @@ import type { MemoryCandidate } from '@qmd-team-intent-kb/schema';
 import { resolveConfig } from './config.js';
 import { runGovern } from './govern.js';
 
-const VERSION = '0.1.6';
+const VERSION = '1.0.0';
 const config = resolveConfig();
 
 const CATEGORIES = [
@@ -301,10 +301,15 @@ server.tool(
 
 // ─── boot ──────────────────────────────────────────────────────────────────
 
-async function main(): Promise<void> {
+/**
+ * Boot local mode: connect the stdio transport. Exported so the dispatcher
+ * (src/index.ts) can start it. The dispatcher dynamic-imports this module ONLY
+ * in local mode, so team mode never loads the local store's native module.
+ */
+export async function startLocalServer(): Promise<void> {
   const transport = new StdioServerTransport();
   const shutdown = async (sig: string): Promise<void> => {
-    process.stderr.write(`[governed-brain] ${sig}, shutting down\n`);
+    process.stderr.write(`[governed-brain:local] ${sig}, shutting down\n`);
     await server.close();
     process.exit(0);
   };
@@ -312,8 +317,6 @@ async function main(): Promise<void> {
   process.on('SIGTERM', () => void shutdown('SIGTERM'));
   await server.connect(transport);
   process.stderr.write(
-    `[governed-brain] started — tenant=${config.tenantId} base=${config.basePath} (local, in-process, no network)\n`,
+    `[governed-brain:local] started — tenant=${config.tenantId} base=${config.basePath} (local, in-process, no network)\n`,
   );
 }
-
-void main();

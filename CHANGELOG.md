@@ -8,6 +8,35 @@ installable Claude Code + Cowork plugin (a local stdio MCP server); the engines 
 
 ## [Unreleased]
 
+## [1.0.0] - 2026-06-20
+
+### Added
+
+- **Team mode** — the plugin is now ONE plugin with two runtime modes, dispatched at startup by
+  whether `TEAMKB_API_URL` is set:
+  - **local** (default, unchanged behavior): the in-process governed brain over your own files
+    (`~/.teamkb`) — full `brain_*` read+write surface, no daemon, no network, no key.
+  - **team** (`TEAMKB_API_URL` set): a remote proxy to your team's single governed brain over the
+    tailnet, with a per-user token. Exposes the unified `brain_search` (read); capture/govern stay
+    governed server-side.
+  This absorbs the former standalone `intent-brain` plugin as this plugin's team mode — one plugin,
+  one tool surface (`brain_*`), the same `/brain` and `/brain-save` skills in both modes. Only your
+  data + `TEAMKB_API_URL` + token are private; the plugin code is public.
+- `src/index.ts` mode dispatcher; `src/remote-server.ts` (the tailnet proxy, moved in from
+  `qmd-team-intent-kb` and renamed `teamkb_search` → `brain_search`); `smoke-team.mjs` (a stub-API
+  team-mode smoke proving dispatch → proxy → `qmd://` citation → bearer forwarding).
+
+### Changed
+
+- The build now bundles the dispatcher (`src/index.ts`) instead of the local server directly; both
+  modes are inlined into the single `plugin-runtime/governed-brain.cjs`, lazily — so team mode never
+  loads the local store's native module (`better-sqlite3`) and runs from a marketplace clone with zero
+  install/build. Manifests (`.mcp.json`, `plugin.json`, `marketplace.json`) declare the
+  `TEAMKB_API_URL` / `TEAMKB_API_TOKEN` env passthrough; the dispatcher treats an empty or unexpanded
+  `${TEAMKB_API_URL}` placeholder as local mode.
+- Version bumped to **1.0.0** across `package.json`, `plugin.json`, `.mcp.json`, `marketplace.json`,
+  and `gsb.lock`.
+
 ## [0.1.7] - 2026-06-20
 
 ### Changed
