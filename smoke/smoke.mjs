@@ -97,8 +97,16 @@ try {
   );
   if (sr.count >= 1) {
     ok(true, `brain_search returned ${sr.count} cited hit(s) — e.g. ${sr.results[0].citation}`);
+  } else if (sr.note) {
+    // qmd is genuinely unavailable in this runner: search failed (res not ok) and
+    // returned a `note`. Stay best-effort — a missing qmd is an environment gap.
+    warn(`brain_search returned 0 hits (qmd index unavailable) — note: ${sr.note}`);
   } else {
-    warn(`brain_search returned 0 hits (qmd index unavailable) — note: ${sr.note ?? 'n/a'}`);
+    // qmd RAN (no note) yet returned nothing for a query that matches the
+    // just-governed memory's title. That is the signature of the local
+    // fail-closed-tenant bug — brain_search omitting config.tenantId so the
+    // c5k.2 guard refuses every query. Fail hard so it can never ship silently.
+    ok(false, 'brain_search returned 0 hits with NO note — qmd ran but retrieval is empty (local tenant-guard regression: does brain_search pass config.tenantId?)');
   }
 } finally {
   await client.close().catch(() => {});

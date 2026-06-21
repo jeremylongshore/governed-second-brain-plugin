@@ -90,7 +90,11 @@ server.tool(
     const scope = params.scope ?? 'curated';
     const limit = params.limit ?? 10;
     const adapter = new QmdAdapter({ tenantId: config.tenantId, exportDir: config.exportDir });
-    const res = await adapter.query(params.query, scope);
+    // Pass the bound tenant explicitly: adapter.query() is fail-closed on an
+    // undefined tenantId (the c5k.2 hardening), so a local search that omits it
+    // is refused and silently returns zero hits. In local mode the query tenant
+    // IS the bound tenant.
+    const res = await adapter.query(params.query, scope, config.tenantId);
     if (!res.ok) {
       return jsonResult({
         source: 'local-qmd',
