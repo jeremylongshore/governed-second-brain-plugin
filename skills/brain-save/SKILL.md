@@ -6,7 +6,7 @@ description: |
   corpus, so it never auto-fires — invoke it explicitly. Use when you want the brain to remember
   something specific going forward without a full recompile, or to mark an old memory outdated.
   Trigger with "/brain-save".
-allowed-tools: 'mcp__governed-brain__brain_capture, mcp__governed-brain__brain_govern, mcp__governed-brain__brain_transition, mcp__governed-brain__brain_status, mcp__governed-brain__brain_audit_verify'
+allowed-tools: 'mcp__governed-brain__brain_search, mcp__governed-brain__brain_capture, mcp__governed-brain__brain_govern, mcp__governed-brain__brain_transition, mcp__governed-brain__brain_status, mcp__governed-brain__brain_audit_verify'
 version: 1.0.0
 author: Jeremy Longshore <jeremy@intentsolutions.io>
 license: Apache-2.0
@@ -34,8 +34,9 @@ are proposing an item for the brain to keep; the deterministic curator owns whet
 
 `disable-model-invocation: true` means Claude will not trigger this from conversation — it runs only
 when you explicitly type it. Writing to **your durable brain** is a deliberate act, not a chat side
-effect. Everything here is **local and single-user**: there is no server, no token, no role — you own
-the brain, and the only gate on a write is that you asked for it.
+effect. In **local mode** you own the brain outright — no server, token, or role; the only gate is
+that you asked. In **team mode** the same deliberate-act rule holds, and the server *additionally*
+enforces your role (a member proposes; an admin governs and retires).
 
 ## Prerequisites
 
@@ -43,10 +44,11 @@ the brain, and the only gate on a write is that you asked for it.
   with the capture + govern tools).
 - `qmd` is on your `PATH` so the govern step can refresh the search index after a promotion. If qmd is
   absent, capture + govern + the audit receipt still complete; only fresh-search visibility waits.
-- **This skill is the local-mode write path.** It runs when the plugin is in local mode (the default,
-  no `TEAMKB_API_URL`). In **team mode** the brain is governed centrally on the server — you read and
-  propose, and the server disposes — so the local capture/govern tools are not exposed; use `/brain` to
-  query the team brain.
+- **Works in both modes.** In **local mode** (default, no `TEAMKB_API_URL`) all the tools below run
+  in-process. In **team mode** (`TEAMKB_API_URL` set) the brain is governed centrally on the server:
+  you **propose** with `brain_capture` and the server **disposes** (govern runs server-side, so there
+  is no client `brain_govern`); `brain_transition` is exposed but **admin-only** (a member gets a clear
+  403); `brain_status` and `brain_audit_verify` are not exposed in team mode. Use `/brain` to query.
 
 ## Instructions
 
@@ -68,6 +70,9 @@ the brain, and the only gate on a write is that you asked for it.
 2. Call **`brain_transition`** with `{ memoryId, to, reason, actor }`. Valid moves:
    `active → {deprecated, superseded, archived}`, `deprecated → {active, archived}`,
    `superseded → archived`. Every transition writes a hash-chained audit event.
+
+> **Team mode:** `brain_transition` is **admin-only** — a member token gets a clear 403 and nothing is
+> applied. (In local mode you are always the owner, so it always works.)
 
 ### Check brain health
 
