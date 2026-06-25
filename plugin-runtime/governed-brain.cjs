@@ -35528,10 +35528,15 @@ function authHeaders() {
 async function errorResult(res) {
   let detail = "";
   try {
-    const b = await res.json();
-    detail = typeof b.error === "string" ? b.error : JSON.stringify(b);
+    const text = await res.text();
+    try {
+      const b = JSON.parse(text);
+      detail = typeof b.error === "string" ? b.error : text;
+    } catch {
+      detail = text;
+    }
   } catch {
-    detail = await res.text().catch(() => "");
+    detail = "";
   }
   const msg = res.status === 401 ? "team token rejected \u2014 check TEAMKB_API_TOKEN" : res.status === 403 ? "this action needs an ADMIN token; your member token can propose but not promote/transition \u2014 nothing was applied" : res.status === 422 ? `the brain declined it: ${detail}` : `request failed (${res.status})${detail ? ": " + detail : ""}`;
   return jsonResult({ ok: false, status: res.status, error: msg });

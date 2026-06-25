@@ -58,12 +58,20 @@ function authHeaders(): Record<string, string> {
 
 /** Map a non-OK brain-API response to a clear, role-aware message (no silent failures). */
 async function errorResult(res: Response): Promise<ReturnType<typeof jsonResult>> {
+  // Read the body stream ONCE as text, then parse — calling res.json() then
+  // res.text() in a fallback throws "body stream already read" and loses non-JSON
+  // error bodies (plain text / HTML error pages).
   let detail = '';
   try {
-    const b = (await res.json()) as { error?: unknown };
-    detail = typeof b.error === 'string' ? b.error : JSON.stringify(b);
+    const text = await res.text();
+    try {
+      const b = JSON.parse(text) as { error?: unknown };
+      detail = typeof b.error === 'string' ? b.error : text;
+    } catch {
+      detail = text;
+    }
   } catch {
-    detail = await res.text().catch(() => '');
+    detail = '';
   }
   const msg =
     res.status === 401
