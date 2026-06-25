@@ -54,12 +54,13 @@ enforces your role (a member proposes; an admin governs and retires).
 
 ### Save a new fact (capture → govern)
 
-**First, search the brain (search-before-save).** Call **`brain_search`** (scope `all`) with the
-proposed title + key terms and summarize what the brain already knows from the `qmd://` hits. If the
-fact is **already covered, stop and say so** — don't duplicate it (the inbox does *not* dedupe at
-intake; only promotion dedupes, so this pre-save search is what keeps the inbox from piling up). A
-`count: 0` result (e.g. `qmd` isn't on `PATH`, or the brain is empty) means *no known coverage* —
-proceed to capture; it is **not** a block. Then capture only the genuinely-new delta:
+**First, search the brain (search-before-save).** Call **`brain_search`** with
+`{ query: "<proposed title + key terms>", scope: "all" }` and summarize what the brain already knows
+from the `qmd://` hits. If the fact is **already covered, stop and say so** — don't duplicate it (the
+inbox does *not* dedupe at intake; only promotion dedupes, so this pre-save search is what keeps the
+inbox from piling up). An empty `results` list (e.g. `qmd` isn't on `PATH`, or the brain is empty)
+means *no known coverage* — proceed to capture; it is **not** a block. Then capture only the
+genuinely-new delta:
 
 1. Confirm it's worth keeping — *"Would I benefit from finding this in 30 days?"* Skip ephemeral
    debugging steps, throwaway preferences, secrets, or anything already in a CLAUDE.md/README.
