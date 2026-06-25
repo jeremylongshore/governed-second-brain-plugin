@@ -40668,6 +40668,53 @@ var init_dist9 = __esm({
   }
 });
 
+// src/seed-policy.ts
+function seedDefaultPolicy(policyRepo, tenantId) {
+  if (policyRepo.findByTenant(tenantId).length > 0) return false;
+  const now = (/* @__PURE__ */ new Date()).toISOString();
+  const policy = GovernancePolicy.parse({
+    id: (0, import_node_crypto8.randomUUID)(),
+    name: "local-default",
+    tenantId,
+    enabled: true,
+    version: 1,
+    createdAt: now,
+    updatedAt: now,
+    rules: [
+      {
+        id: "secret-detection",
+        type: "secret_detection",
+        action: "reject",
+        enabled: true,
+        priority: 0,
+        parameters: {},
+        description: "Reject candidates containing credentials/secrets \u2014 a receipted backstop to the always-on disclosure choke point."
+      },
+      {
+        id: "content-length",
+        type: "content_length",
+        action: "reject",
+        enabled: true,
+        priority: 10,
+        // NOTE: the content_length rule reads parameters['min'] (default 10) —
+        // NOT 'minLength' (a 'minLength' key is silently ignored).
+        parameters: { min: 25 },
+        description: "Reject too-short candidates (<25 chars) \u2014 low-signal noise."
+      }
+    ]
+  });
+  policyRepo.insert(policy);
+  return true;
+}
+var import_node_crypto8;
+var init_seed_policy = __esm({
+  "src/seed-policy.ts"() {
+    "use strict";
+    import_node_crypto8 = require("node:crypto");
+    init_dist();
+  }
+});
+
 // src/govern.ts
 function commitAnchor(auditDir) {
   const env = {
@@ -40700,6 +40747,7 @@ async function runGovern(config2) {
     const policyRepo = new PolicyRepository(db);
     const auditRepo = new AuditRepository(db);
     const exportStateRepo = new ExportStateRepository(db);
+    seedDefaultPolicy(policyRepo, config2.tenantId);
     const ingestResult = await ingestFromSpool(candidateRepo, config2.spoolPath);
     const candidates = ingestResult.ok ? ingestResult.value : [];
     const curation = { processed: 0, promoted: 0, rejected: 0, flagged: 0, duplicates: 0 };
@@ -40783,6 +40831,7 @@ var init_govern = __esm({
     import_node_child_process3 = require("node:child_process");
     import_node_fs6 = require("node:fs");
     import_node_path12 = require("node:path");
+    init_seed_policy();
   }
 });
 
@@ -40816,11 +40865,11 @@ async function startLocalServer() {
 `
   );
 }
-var import_node_crypto8, import_zod17, import_node_path13, VERSION2, config, CATEGORIES2, NATIVE_DEP_HINT, server2;
+var import_node_crypto9, import_zod17, import_node_path13, VERSION2, config, CATEGORIES2, NATIVE_DEP_HINT, server2;
 var init_local_server = __esm({
   "src/local-server.ts"() {
     "use strict";
-    import_node_crypto8 = require("node:crypto");
+    import_node_crypto9 = require("node:crypto");
     init_mcp();
     init_stdio2();
     import_zod17 = __toESM(require_zod(), 1);
@@ -40943,7 +40992,7 @@ var init_local_server = __esm({
       },
       async (params) => {
         const candidate = {
-          id: (0, import_node_crypto8.randomUUID)(),
+          id: (0, import_node_crypto9.randomUUID)(),
           status: "inbox",
           source: "mcp",
           content: params.content,
@@ -41030,7 +41079,7 @@ var init_local_server = __esm({
           db.transaction(() => {
             memoryRepo.updateLifecycle(params.memoryId, params.to, now);
             auditRepo.insert({
-              id: (0, import_node_crypto8.randomUUID)(),
+              id: (0, import_node_crypto9.randomUUID)(),
               action,
               memoryId: params.memoryId,
               tenantId: memory.tenantId,

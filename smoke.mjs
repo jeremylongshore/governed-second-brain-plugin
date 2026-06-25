@@ -33,5 +33,18 @@ console.log('\nSEARCH:\n' + text(await client.callTool({
   arguments: { query: 'governed brain daemon network local' },
 })));
 
+// The seeded local default policy must produce a RECEIPTED rejection: a too-short
+// capture is rejected by the content_length rule, not silently auto-approved.
+await client.callTool({
+  name: 'brain_capture',
+  arguments: { title: 'too short', content: 'x', category: 'reference' },
+});
+const govShort = JSON.parse(text(await client.callTool({ name: 'brain_govern', arguments: {} })));
+console.log('\nGOVERN(too-short):', JSON.stringify({ ingested: govShort.ingested, promoted: govShort.promoted, rejected: govShort.rejected }));
+if (!(govShort.rejected >= 1)) {
+  console.error('✗ seeded local policy did not reject the too-short candidate (content_length)');
+  process.exit(1);
+}
+
 await client.close();
-console.log('\n✓ smoke complete');
+console.log('\n✓ smoke complete (incl. seeded-policy receipted rejection)');
