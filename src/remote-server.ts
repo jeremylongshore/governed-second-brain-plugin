@@ -18,6 +18,7 @@
  *   TEAMKB_API_URL    — brain API base (e.g. http://team-server:3847). Required for results.
  *   TEAMKB_API_TOKEN  — per-user bearer token (sent as Authorization: Bearer).
  */
+import { randomUUID } from 'node:crypto';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { z } from 'zod';
@@ -25,6 +26,55 @@ import { z } from 'zod';
 const VERSION = '1.0.0';
 const API_URL = process.env['TEAMKB_API_URL'];
 const API_TOKEN = process.env['TEAMKB_API_TOKEN'];
+// The team brain's tenant. Defaults to the real shared tenant; an env override
+// lets a teammate target another tenant. NEVER hardcode 'local' here (that would
+// silently route team writes into a tenant the team brain never reads).
+const TENANT_ID = process.env['TEAMKB_TENANT_ID']?.trim() || 'intent-solutions';
+
+// Category enum, copied verbatim from local-server.ts (NOT imported — team mode
+// stays dependency-free: no @qmd-team-intent-kb/* in the bundle).
+const CATEGORIES = [
+  'decision',
+  'pattern',
+  'convention',
+  'architecture',
+  'troubleshooting',
+  'onboarding',
+  'reference',
+] as const;
+
+function jsonResult(obj: unknown) {
+  return { content: [{ type: 'text' as const, text: JSON.stringify(obj, null, 2) }] };
+}
+
+/** content-type + (optional) per-user bearer — the one auth surface for every call. */
+function authHeaders(): Record<string, string> {
+  const headers: Record<string, string> = { 'content-type': 'application/json' };
+  if (API_TOKEN !== undefined && API_TOKEN !== '') {
+    headers['authorization'] = `Bearer ${API_TOKEN}`;
+  }
+  return headers;
+}
+
+/** Map a non-OK brain-API response to a clear, role-aware message (no silent failures). */
+async function errorResult(res: Response): Promise<ReturnType<typeof jsonResult>> {
+  let detail = '';
+  try {
+    const b = (await res.json()) as { error?: unknown };
+    detail = typeof b.error === 'string' ? b.error : JSON.stringify(b);
+  } catch {
+    detail = await res.text().catch(() => '');
+  }
+  const msg =
+    res.status === 401
+      ? 'team token rejected — check TEAMKB_API_TOKEN'
+      : res.status === 403
+        ? 'this action needs an ADMIN token; your member token can propose but not promote/transition — nothing was applied'
+        : res.status === 422
+          ? `the brain declined it: ${detail}`
+          : `request failed (${res.status})${detail ? ': ' + detail : ''}`;
+  return jsonResult({ ok: false, status: res.status, error: msg });
+}
 
 interface CitedHit {
   citation: string;
@@ -43,15 +93,11 @@ async function search(
   if (API_URL === undefined || API_URL === '') {
     return { ...empty, source: 'unconfigured' };
   }
-  const headers: Record<string, string> = { 'content-type': 'application/json' };
-  if (API_TOKEN !== undefined && API_TOKEN !== '') {
-    headers['authorization'] = `Bearer ${API_TOKEN}`;
-  }
   const url = `${API_URL.replace(/\/+$/, '')}/api/search`;
   try {
     const res = await fetch(url, {
       method: 'POST',
-      headers,
+      headers: authHeaders(),
       body: JSON.stringify({ query, scope, pagination: { page: 1, pageSize: limit } }),
     });
     if (!res.ok) return empty;
@@ -101,6 +147,99 @@ server.tool(
   async (params) => {
     const result = await search(params.query, params.scope ?? 'curated', params.limit ?? 10);
     return { content: [{ type: 'text' as const, text: JSON.stringify(result, null, 2) }] };
+  },
+);
+
+// ─── WRITE (team mode: member proposes, the server disposes) ──────────────────
+
+server.tool(
+  'brain_capture',
+  "Propose a fact, decision, pattern, or convention to your team's governed brain — a PROPOSAL, not a promotion. Member-allowed: the server queues it as a candidate and the deterministic govern pipeline disposes; it is not durable memory until promoted. Proxies to the brain over the tailnet (team mode).",
+  {
+    title: z.string().min(1).describe('Short, specific title for the memory'),
+    content: z.string().min(1).describe('The fact to remember, in full'),
+    category: z.enum(CATEGORIES).optional().describe('Memory category (default: reference)'),
+    filePaths: z.array(z.string()).optional().describe('Related file paths, if any'),
+  },
+  async (params) => {
+    if (API_URL === undefined || API_URL === '') {
+      return jsonResult({ ok: false, error: 'unconfigured — set TEAMKB_API_URL to your team brain' });
+    }
+    // Build the FULL MemoryCandidate client-side (the server safeParses it with
+    // no defaults) — identical shape to local mode, but tenant-scoped to TENANT_ID.
+    const candidate = {
+      id: randomUUID(),
+      status: 'inbox',
+      source: 'mcp',
+      content: params.content,
+      title: params.title,
+      category: params.category ?? 'reference',
+      trustLevel: 'medium',
+      author: { type: 'ai', id: 'governed-brain' },
+      tenantId: TENANT_ID,
+      metadata: { filePaths: params.filePaths ?? [], tags: [] as string[] },
+      prePolicyFlags: { potentialSecret: false, lowConfidence: false, duplicateSuspect: false },
+      capturedAt: new Date().toISOString(),
+    };
+    let res: Response;
+    try {
+      res = await fetch(`${API_URL.replace(/\/+$/, '')}/api/candidates`, {
+        method: 'POST',
+        headers: authHeaders(),
+        body: JSON.stringify(candidate),
+      });
+    } catch (e) {
+      return jsonResult({ ok: false, error: `could not reach the brain API: ${e instanceof Error ? e.message : String(e)}` });
+    }
+    if (!res.ok) return errorResult(res);
+    return jsonResult({
+      ok: true,
+      candidateId: candidate.id,
+      tenantId: TENANT_ID,
+      message:
+        'Proposed to the team brain inbox. This is a PROPOSAL — the deterministic govern pipeline decides if/when it is promoted (an admin governs, or auto-govern once enabled). It is not durable memory yet.',
+    });
+  },
+);
+
+server.tool(
+  'brain_transition',
+  'Change the lifecycle state of an existing governed memory (e.g. retire an outdated one). ADMIN-ONLY in team mode — a member token gets a clear 403 and nothing is applied. The server writes a hash-chained audit event. Valid moves: active→{deprecated,superseded,archived}, deprecated→{active,archived}, superseded→archived.',
+  {
+    memoryId: z.string().uuid().describe('UUID of the memory to transition'),
+    to: z.enum(['active', 'deprecated', 'superseded', 'archived']).describe('Target lifecycle state'),
+    reason: z.string().min(1).describe('Human-readable justification (lands in the audit trail)'),
+    actor: z.string().optional().describe('Who is making the change (default: owner)'),
+    supersededBy: z.string().uuid().optional().describe('Required UUID when transitioning to "superseded"'),
+  },
+  async (params) => {
+    if (API_URL === undefined || API_URL === '') {
+      return jsonResult({ ok: false, error: 'unconfigured — set TEAMKB_API_URL to your team brain' });
+    }
+    // The transition route expects an Author OBJECT (not local mode's string).
+    const body: Record<string, unknown> = {
+      to: params.to,
+      reason: params.reason,
+      actor: { type: 'human', id: params.actor ?? 'owner' },
+    };
+    if (params.supersededBy !== undefined) body['supersededBy'] = params.supersededBy;
+    let res: Response;
+    try {
+      res = await fetch(`${API_URL.replace(/\/+$/, '')}/api/memories/${params.memoryId}/transition`, {
+        method: 'POST',
+        headers: authHeaders(),
+        body: JSON.stringify(body),
+      });
+    } catch (e) {
+      return jsonResult({ ok: false, error: `could not reach the brain API: ${e instanceof Error ? e.message : String(e)}` });
+    }
+    if (!res.ok) return errorResult(res);
+    return jsonResult({
+      ok: true,
+      memoryId: params.memoryId,
+      to: params.to,
+      message: 'Transition applied; hash-chained audit event written server-side.',
+    });
   },
 );
 

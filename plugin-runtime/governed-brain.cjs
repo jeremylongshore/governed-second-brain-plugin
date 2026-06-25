@@ -35515,20 +35515,37 @@ var remote_server_exports = {};
 __export(remote_server_exports, {
   startRemoteServer: () => startRemoteServer
 });
+function jsonResult(obj) {
+  return { content: [{ type: "text", text: JSON.stringify(obj, null, 2) }] };
+}
+function authHeaders() {
+  const headers = { "content-type": "application/json" };
+  if (API_TOKEN !== void 0 && API_TOKEN !== "") {
+    headers["authorization"] = `Bearer ${API_TOKEN}`;
+  }
+  return headers;
+}
+async function errorResult(res) {
+  let detail = "";
+  try {
+    const b = await res.json();
+    detail = typeof b.error === "string" ? b.error : JSON.stringify(b);
+  } catch {
+    detail = await res.text().catch(() => "");
+  }
+  const msg = res.status === 401 ? "team token rejected \u2014 check TEAMKB_API_TOKEN" : res.status === 403 ? "this action needs an ADMIN token; your member token can propose but not promote/transition \u2014 nothing was applied" : res.status === 422 ? `the brain declined it: ${detail}` : `request failed (${res.status})${detail ? ": " + detail : ""}`;
+  return jsonResult({ ok: false, status: res.status, error: msg });
+}
 async function search(query, scope, limit) {
   const empty = { source: "brain-api", query, scope, count: 0, results: [] };
   if (API_URL === void 0 || API_URL === "") {
     return { ...empty, source: "unconfigured" };
   }
-  const headers = { "content-type": "application/json" };
-  if (API_TOKEN !== void 0 && API_TOKEN !== "") {
-    headers["authorization"] = `Bearer ${API_TOKEN}`;
-  }
   const url = `${API_URL.replace(/\/+$/, "")}/api/search`;
   try {
     const res = await fetch(url, {
       method: "POST",
-      headers,
+      headers: authHeaders(),
       body: JSON.stringify({ query, scope, pagination: { page: 1, pageSize: limit } })
     });
     if (!res.ok) return empty;
@@ -35561,16 +35578,27 @@ async function startRemoteServer() {
 `
   );
 }
-var import_zod2, VERSION, API_URL, API_TOKEN, server;
+var import_node_crypto, import_zod2, VERSION, API_URL, API_TOKEN, TENANT_ID, CATEGORIES, server;
 var init_remote_server = __esm({
   "src/remote-server.ts"() {
     "use strict";
+    import_node_crypto = require("node:crypto");
     init_mcp();
     init_stdio2();
     import_zod2 = __toESM(require_zod(), 1);
     VERSION = "1.0.0";
     API_URL = process.env["TEAMKB_API_URL"];
     API_TOKEN = process.env["TEAMKB_API_TOKEN"];
+    TENANT_ID = process.env["TEAMKB_TENANT_ID"]?.trim() || "intent-solutions";
+    CATEGORIES = [
+      "decision",
+      "pattern",
+      "convention",
+      "architecture",
+      "troubleshooting",
+      "onboarding",
+      "reference"
+    ];
     server = new McpServer({ name: "governed-brain", version: VERSION });
     server.tool(
       "brain_search",
@@ -35583,6 +35611,91 @@ var init_remote_server = __esm({
       async (params) => {
         const result = await search(params.query, params.scope ?? "curated", params.limit ?? 10);
         return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
+      }
+    );
+    server.tool(
+      "brain_capture",
+      "Propose a fact, decision, pattern, or convention to your team's governed brain \u2014 a PROPOSAL, not a promotion. Member-allowed: the server queues it as a candidate and the deterministic govern pipeline disposes; it is not durable memory until promoted. Proxies to the brain over the tailnet (team mode).",
+      {
+        title: import_zod2.z.string().min(1).describe("Short, specific title for the memory"),
+        content: import_zod2.z.string().min(1).describe("The fact to remember, in full"),
+        category: import_zod2.z.enum(CATEGORIES).optional().describe("Memory category (default: reference)"),
+        filePaths: import_zod2.z.array(import_zod2.z.string()).optional().describe("Related file paths, if any")
+      },
+      async (params) => {
+        if (API_URL === void 0 || API_URL === "") {
+          return jsonResult({ ok: false, error: "unconfigured \u2014 set TEAMKB_API_URL to your team brain" });
+        }
+        const candidate = {
+          id: (0, import_node_crypto.randomUUID)(),
+          status: "inbox",
+          source: "mcp",
+          content: params.content,
+          title: params.title,
+          category: params.category ?? "reference",
+          trustLevel: "medium",
+          author: { type: "ai", id: "governed-brain" },
+          tenantId: TENANT_ID,
+          metadata: { filePaths: params.filePaths ?? [], tags: [] },
+          prePolicyFlags: { potentialSecret: false, lowConfidence: false, duplicateSuspect: false },
+          capturedAt: (/* @__PURE__ */ new Date()).toISOString()
+        };
+        let res;
+        try {
+          res = await fetch(`${API_URL.replace(/\/+$/, "")}/api/candidates`, {
+            method: "POST",
+            headers: authHeaders(),
+            body: JSON.stringify(candidate)
+          });
+        } catch (e) {
+          return jsonResult({ ok: false, error: `could not reach the brain API: ${e instanceof Error ? e.message : String(e)}` });
+        }
+        if (!res.ok) return errorResult(res);
+        return jsonResult({
+          ok: true,
+          candidateId: candidate.id,
+          tenantId: TENANT_ID,
+          message: "Proposed to the team brain inbox. This is a PROPOSAL \u2014 the deterministic govern pipeline decides if/when it is promoted (an admin governs, or auto-govern once enabled). It is not durable memory yet."
+        });
+      }
+    );
+    server.tool(
+      "brain_transition",
+      "Change the lifecycle state of an existing governed memory (e.g. retire an outdated one). ADMIN-ONLY in team mode \u2014 a member token gets a clear 403 and nothing is applied. The server writes a hash-chained audit event. Valid moves: active\u2192{deprecated,superseded,archived}, deprecated\u2192{active,archived}, superseded\u2192archived.",
+      {
+        memoryId: import_zod2.z.string().uuid().describe("UUID of the memory to transition"),
+        to: import_zod2.z.enum(["active", "deprecated", "superseded", "archived"]).describe("Target lifecycle state"),
+        reason: import_zod2.z.string().min(1).describe("Human-readable justification (lands in the audit trail)"),
+        actor: import_zod2.z.string().optional().describe("Who is making the change (default: owner)"),
+        supersededBy: import_zod2.z.string().uuid().optional().describe('Required UUID when transitioning to "superseded"')
+      },
+      async (params) => {
+        if (API_URL === void 0 || API_URL === "") {
+          return jsonResult({ ok: false, error: "unconfigured \u2014 set TEAMKB_API_URL to your team brain" });
+        }
+        const body = {
+          to: params.to,
+          reason: params.reason,
+          actor: { type: "human", id: params.actor ?? "owner" }
+        };
+        if (params.supersededBy !== void 0) body["supersededBy"] = params.supersededBy;
+        let res;
+        try {
+          res = await fetch(`${API_URL.replace(/\/+$/, "")}/api/memories/${params.memoryId}/transition`, {
+            method: "POST",
+            headers: authHeaders(),
+            body: JSON.stringify(body)
+          });
+        } catch (e) {
+          return jsonResult({ ok: false, error: `could not reach the brain API: ${e instanceof Error ? e.message : String(e)}` });
+        }
+        if (!res.ok) return errorResult(res);
+        return jsonResult({
+          ok: true,
+          memoryId: params.memoryId,
+          to: params.to,
+          message: "Transition applied; hash-chained audit event written server-side."
+        });
       }
     );
   }
@@ -35837,6 +35950,36 @@ ALTER TABLE audit_events ADD COLUMN prev_entry_hash TEXT;
         name: "rehash_audit_chain_v2",
         sql: `
 ALTER TABLE audit_events ADD COLUMN hash_version INTEGER NOT NULL DEFAULT 1;
+    `.trim()
+      },
+      {
+        // Order the audit hash chain by a monotonic write-order key instead of
+        // (timestamp, id) — bead qmd-team-intent-kb-yxp.
+        //
+        // `id` is a random UUID, so when two events share one timestamp (a
+        // promotion that supersedes writes a `promoted` and a `superseded` event
+        // in the same instant) the equal-timestamp tiebreak sorted by UUID,
+        // flipping ~half the pairs relative to true insertion order. The
+        // prev_entry_hash links were always built in insertion order (the
+        // write-time prev lookup returned the sole same-timestamp predecessor
+        // present at write time), so the verifier's (timestamp, id) read
+        // disagreed with the stored links and reported PREV_LINK_MISMATCH on
+        // every flipped pair — even though every entry_hash was intact (no
+        // tampering, only a stale ordering contract).
+        //
+        // Fix: add an explicit monotonic `seq`, backfill existing rows by rowid
+        // (which reflects insertion order for this append-only, delete-free
+        // table), and order both the verifier walk and the write-time prev lookup
+        // by seq. No row data is rewritten and no entry_hash changes — the
+        // existing chain verifies clean immediately. An explicit column (rather
+        // than relying on SQLite's rowid) keeps the ordering contract portable to
+        // Dolt/Postgres, where rowid has no stable equivalent.
+        version: 7,
+        name: "add_audit_seq_ordering",
+        sql: `
+ALTER TABLE audit_events ADD COLUMN seq INTEGER;
+UPDATE audit_events SET seq = rowid WHERE seq IS NULL;
+CREATE UNIQUE INDEX IF NOT EXISTS idx_audit_seq ON audit_events(seq);
     `.trim()
       }
     ];
@@ -36249,13 +36392,13 @@ var init_result = __esm({
 
 // ../qmd-team-intent-kb/packages/common/dist/hash.js
 function computeContentHash(content) {
-  return (0, import_node_crypto.createHash)("sha256").update(content, "utf8").digest("hex");
+  return (0, import_node_crypto2.createHash)("sha256").update(content, "utf8").digest("hex");
 }
-var import_node_crypto;
+var import_node_crypto2;
 var init_hash = __esm({
   "../qmd-team-intent-kb/packages/common/dist/hash.js"() {
     "use strict";
-    import_node_crypto = require("node:crypto");
+    import_node_crypto2 = require("node:crypto");
   }
 });
 
@@ -36280,7 +36423,7 @@ function uuidBytesToString(bytes) {
 function uuidV5(namespace, name) {
   const nsBytes = uuidStringToBytes(namespace);
   const nameBytes = Buffer.from(name, "utf8");
-  const hash = (0, import_node_crypto2.createHash)("sha1").update(nsBytes).update(nameBytes).digest();
+  const hash = (0, import_node_crypto3.createHash)("sha1").update(nsBytes).update(nameBytes).digest();
   const bytes = Buffer.from(hash.subarray(0, 16));
   bytes[6] = bytes[6] & 15 | 80;
   bytes[8] = bytes[8] & 63 | 128;
@@ -36302,11 +36445,11 @@ function deriveLinkId(sourceMemoryId, targetMemoryId, linkType) {
   const name = ["link", sourceMemoryId, targetMemoryId, linkType].join(NAME_FIELD_SEPARATOR);
   return uuidV5(SPOOL_UUID_NAMESPACE, name);
 }
-var import_node_crypto2, SPOOL_UUID_NAMESPACE, NAME_FIELD_SEPARATOR;
+var import_node_crypto3, SPOOL_UUID_NAMESPACE, NAME_FIELD_SEPARATOR;
 var init_uuid_v5 = __esm({
   "../qmd-team-intent-kb/packages/common/dist/uuid-v5.js"() {
     "use strict";
-    import_node_crypto2 = require("node:crypto");
+    import_node_crypto3 = require("node:crypto");
     SPOOL_UUID_NAMESPACE = ["6c6f6e67-7368-6f72", "6500-69636f73706c"].join("-");
     NAME_FIELD_SEPARATOR = String.fromCharCode(0);
   }
@@ -36621,6 +36764,56 @@ var init_dist2 = __esm({
   }
 });
 
+// ../qmd-team-intent-kb/packages/store/dist/repositories/enum-membership.js
+function assertEnumMembership(candidate) {
+  const checks = [
+    { field: "status", schema: CandidateStatus, value: candidate.status },
+    { field: "source", schema: MemorySource, value: candidate.source },
+    { field: "category", schema: MemoryCategory, value: candidate.category },
+    { field: "trustLevel", schema: TrustLevel, value: candidate.trustLevel },
+    { field: "author.type", schema: AuthorType, value: candidate.author?.type },
+    {
+      field: "metadata.confidence",
+      schema: Confidence,
+      value: candidate.metadata?.confidence
+    },
+    {
+      field: "metadata.sensitivity",
+      schema: Sensitivity,
+      value: candidate.metadata?.sensitivity
+    }
+  ];
+  for (const { field, schema, value } of checks) {
+    if (value === void 0)
+      continue;
+    if (schema.safeParse(value).success)
+      continue;
+    if (typeof value === "string") {
+      const violation = scanForDisclosure(value);
+      if (violation !== null) {
+        throw new DisclosureRejectedError(violation.category);
+      }
+    }
+    throw new EnumConstraintViolationError(field);
+  }
+}
+var EnumConstraintViolationError;
+var init_enum_membership = __esm({
+  "../qmd-team-intent-kb/packages/store/dist/repositories/enum-membership.js"() {
+    "use strict";
+    init_dist();
+    init_dist2();
+    EnumConstraintViolationError = class extends Error {
+      field;
+      constructor(field) {
+        super(`Candidate rejected: field '${field}' carries a value outside its closed vocabulary and cannot enter the governed brain.`);
+        this.name = "EnumConstraintViolationError";
+        this.field = field;
+      }
+    };
+  }
+});
+
 // ../qmd-team-intent-kb/packages/store/dist/repositories/candidate-repository.js
 function rowToCandidate(row) {
   const flatResult = CandidateRowSchema.safeParse(row);
@@ -36674,6 +36867,7 @@ var init_candidate_repository = __esm({
     import_zod11 = __toESM(require_zod(), 1);
     init_dist();
     init_dist2();
+    init_enum_membership();
     CandidateRowSchema = import_zod11.z.object({
       id: import_zod11.z.string(),
       status: import_zod11.z.string(),
@@ -36746,11 +36940,26 @@ var init_candidate_repository = __esm({
        * value. A violating candidate throws `DisclosureRejectedError` and is never
        * written.
        *
+       * **Enum-membership re-assertion (Epic 0 residual hardening).** The disclosure
+       * scan deliberately SKIPS the closed-vocabulary fields (`status`, `source`,
+       * `category`, `trustLevel`, `confidence`, `sensitivity`, `author.type`) - safe
+       * only while those fields actually hold a vocabulary member. A raw `insert()`
+       * caller that bypassed `MemoryCandidate.parse()` could otherwise smuggle an
+       * SSN / comp / secret-shaped value into an enum field and ride the skip into
+       * durable state. `assertEnumMembership` closes that gap here: an off-vocabulary
+       * value is rejected (routed through the disclosure scan first so a
+       * disclosure-shaped value is caught with its precise category); a valid enum
+       * value is left untouched.
+       *
        * @throws {DisclosureRejectedError} when content/title/tags contain disallowed
-       *   PII, compensation, or credential/secret material.
+       *   PII, compensation, or credential/secret material - or when a disclosure-shaped
+       *   value is smuggled into an enum-constrained field.
+       * @throws {EnumConstraintViolationError} when an enum-constrained field carries a
+       *   non-vocabulary value that is not itself disclosure-shaped.
        */
       insert(candidate, contentHash, importBatchId) {
         assertDisclosureClean(candidate);
+        assertEnumMembership(candidate);
         this.stmtInsert.run({
           id: candidate.id,
           status: candidate.status,
@@ -37354,13 +37563,13 @@ function canonicalRowJson(row, hashVersion = CURRENT_AUDIT_HASH_VERSION) {
   return hashVersion === 1 ? canonicalRowJsonV1(row) : canonicalRowJsonV2(row);
 }
 function computeEntryHash(row, hashVersion = CURRENT_AUDIT_HASH_VERSION) {
-  return (0, import_node_crypto3.createHash)("sha256").update(canonicalRowJson(row, hashVersion), "utf8").digest("hex");
+  return (0, import_node_crypto4.createHash)("sha256").update(canonicalRowJson(row, hashVersion), "utf8").digest("hex");
 }
-var import_node_crypto3, CURRENT_AUDIT_HASH_VERSION;
+var import_node_crypto4, CURRENT_AUDIT_HASH_VERSION;
 var init_audit_chain = __esm({
   "../qmd-team-intent-kb/packages/store/dist/audit-chain.js"() {
     "use strict";
-    import_node_crypto3 = require("node:crypto");
+    import_node_crypto4 = require("node:crypto");
     CURRENT_AUDIT_HASH_VERSION = 2;
   }
 });
@@ -37433,24 +37642,27 @@ var init_audit_repository = __esm({
       stmtCountByTenantAndAction;
       stmtLastHash;
       stmtFindAllChronological;
+      /** Atomic (BEGIN IMMEDIATE) prev-read + INSERT — see the constructor. */
+      appendTxn;
       constructor(db) {
         this.stmtInsert = db.prepare(`
       INSERT INTO audit_events (
         id, action, memory_id, tenant_id, actor_json, reason, details_json,
-        timestamp, entry_hash, prev_entry_hash, hash_version
+        timestamp, entry_hash, prev_entry_hash, hash_version, seq
       ) VALUES (
         @id, @action, @memory_id, @tenant_id, @actor_json, @reason, @details_json,
-        @timestamp, @entry_hash, @prev_entry_hash, @hash_version
+        @timestamp, @entry_hash, @prev_entry_hash, @hash_version,
+        (SELECT COALESCE(MAX(seq), 0) + 1 FROM audit_events)
       )
     `);
         this.stmtLastHash = db.prepare(`
       SELECT entry_hash FROM audit_events
       WHERE entry_hash IS NOT NULL
-      ORDER BY timestamp DESC, id DESC
+      ORDER BY seq DESC
       LIMIT 1
     `);
         this.stmtFindAllChronological = db.prepare(`
-      SELECT * FROM audit_events ORDER BY timestamp ASC, id ASC
+      SELECT * FROM audit_events ORDER BY seq ASC
     `);
         this.stmtFindByMemory = db.prepare(`
       SELECT * FROM audit_events WHERE memory_id = ? ORDER BY timestamp ASC
@@ -37476,6 +37688,34 @@ var init_audit_repository = __esm({
         this.stmtCountByTenantAndAction = db.prepare(`
       SELECT action, COUNT(*) as cnt FROM audit_events WHERE tenant_id = ? GROUP BY action
     `);
+        this.appendTxn = db.transaction((p) => {
+          const prevRow = this.stmtLastHash.get();
+          const prev_entry_hash = prevRow?.entry_hash ?? null;
+          const entry_hash = computeEntryHash({
+            id: p.event.id,
+            action: p.event.action,
+            memory_id: p.event.memoryId,
+            tenant_id: p.event.tenantId,
+            actor_json: p.actor_json,
+            reason: p.reason,
+            details_json: p.details_json,
+            timestamp: p.event.timestamp,
+            prev_entry_hash
+          }, p.hash_version);
+          this.stmtInsert.run({
+            id: p.event.id,
+            action: p.event.action,
+            memory_id: p.event.memoryId,
+            tenant_id: p.event.tenantId,
+            actor_json: p.actor_json,
+            reason: p.reason,
+            details_json: p.details_json,
+            timestamp: p.event.timestamp,
+            entry_hash,
+            prev_entry_hash,
+            hash_version: p.hash_version
+          });
+        });
       }
       /**
        * Append a new audit event. This is the only write operation permitted.
@@ -37491,40 +37731,19 @@ var init_audit_repository = __esm({
        * stored alongside the row so the verifier knows which serialiser to use.
        */
       insert(event) {
-        const actor_json = JSON.stringify(event.actor);
-        const details_json = JSON.stringify(event.details);
-        const reason = event.reason ?? null;
-        const hash_version = CURRENT_AUDIT_HASH_VERSION;
-        const prevRow = this.stmtLastHash.get();
-        const prev_entry_hash = prevRow?.entry_hash ?? null;
-        const entry_hash = computeEntryHash({
-          id: event.id,
-          action: event.action,
-          memory_id: event.memoryId,
-          tenant_id: event.tenantId,
-          actor_json,
-          reason,
-          details_json,
-          timestamp: event.timestamp,
-          prev_entry_hash
-        }, hash_version);
-        this.stmtInsert.run({
-          id: event.id,
-          action: event.action,
-          memory_id: event.memoryId,
-          tenant_id: event.tenantId,
-          actor_json,
-          reason,
-          details_json,
-          timestamp: event.timestamp,
-          entry_hash,
-          prev_entry_hash,
-          hash_version
+        this.appendTxn.immediate({
+          event,
+          actor_json: JSON.stringify(event.actor),
+          details_json: JSON.stringify(event.details),
+          reason: event.reason ?? null,
+          hash_version: CURRENT_AUDIT_HASH_VERSION
         });
       }
       /**
-       * Return every audit row in chronological (timestamp, id) order with
-       * the raw hash-chain columns intact. Used by the chain verifier.
+       * Return every audit row in monotonic write-order (`seq`, i.e. insertion
+       * order) with the raw hash-chain columns intact. Used by the chain verifier;
+       * `seq` ordering is what makes the walk match the order the prev-links were
+       * built in, so same-timestamp pairs verify correctly (bead yxp).
        */
       findAllChronological() {
         return this.stmtFindAllChronological.all();
@@ -37610,6 +37829,7 @@ function verifyAuditChain(repo) {
   let unverifiedRows = 0;
   let cleanRows = 0;
   let expectedPrev = null;
+  const seenEntryHashes = /* @__PURE__ */ new Set();
   for (let i = 0; i < rows.length; i++) {
     const row = rows[i];
     if (row.entry_hash === null && row.prev_entry_hash === null) {
@@ -37632,10 +37852,14 @@ function verifyAuditChain(repo) {
     if (prevMatches && entryMatches) {
       cleanRows++;
       expectedPrev = row.entry_hash;
+      if (row.entry_hash !== null)
+        seenEntryHashes.add(row.entry_hash);
       continue;
     }
     let reason;
-    if (!prevMatches && !entryMatches) {
+    if (entryMatches && row.prev_entry_hash !== null && seenEntryHashes.has(row.prev_entry_hash)) {
+      reason = "CHAIN_FORK";
+    } else if (!prevMatches && !entryMatches) {
       reason = "PREV_LINK_AND_ENTRY_HASH_MISMATCH";
     } else if (!prevMatches) {
       reason = "PREV_LINK_MISMATCH";
@@ -37655,6 +37879,8 @@ function verifyAuditChain(repo) {
       reason
     });
     expectedPrev = row.entry_hash;
+    if (entryMatches && row.entry_hash !== null)
+      seenEntryHashes.add(row.entry_hash);
   }
   return {
     totalRows: rows.length,
@@ -37682,7 +37908,7 @@ function anchorBodyJson(b) {
   });
 }
 function computeAnchorHash(body) {
-  return (0, import_node_crypto4.createHash)("sha256").update(anchorBodyJson(body), "utf8").digest("hex");
+  return (0, import_node_crypto5.createHash)("sha256").update(anchorBodyJson(body), "utf8").digest("hex");
 }
 function chainedRowsOf(repo) {
   return repo.findAllChronological().filter((r) => r.entry_hash !== null);
@@ -37769,13 +37995,30 @@ function verifyAnchors(repo, anchorPath) {
     ok: chain.breaks.length === 0 && anchorBreaks.length === 0
   };
 }
-var import_node_crypto4, import_node_fs2;
+var import_node_crypto5, import_node_fs2;
 var init_audit_anchor = __esm({
   "../qmd-team-intent-kb/packages/store/dist/audit-anchor.js"() {
     "use strict";
-    import_node_crypto4 = require("node:crypto");
+    import_node_crypto5 = require("node:crypto");
     import_node_fs2 = require("node:fs");
     init_audit_verify();
+  }
+});
+
+// ../qmd-team-intent-kb/packages/store/dist/signed-merge-anchor.js
+var init_signed_merge_anchor = __esm({
+  "../qmd-team-intent-kb/packages/store/dist/signed-merge-anchor.js"() {
+    "use strict";
+  }
+});
+
+// ../qmd-team-intent-kb/packages/store/dist/audit-verify-merge.js
+var init_audit_verify_merge = __esm({
+  "../qmd-team-intent-kb/packages/store/dist/audit-verify-merge.js"() {
+    "use strict";
+    init_audit_chain();
+    init_audit_verify();
+    init_signed_merge_anchor();
   }
 });
 
@@ -37858,12 +38101,15 @@ var init_dist3 = __esm({
     init_database();
     init_schema();
     init_candidate_repository();
+    init_enum_membership();
     init_memory_repository();
     init_policy_repository();
     init_audit_repository();
     init_audit_verify();
     init_audit_chain();
     init_audit_anchor();
+    init_signed_merge_anchor();
+    init_audit_verify_merge();
     init_export_state_repository();
     init_memory_links_repository();
     init_import_batch_repository();
@@ -38959,7 +39205,7 @@ async function verifySpoolManifest(spoolFilePath) {
     const msg = e instanceof Error ? e.message : String(e);
     return { ok: false, error: `Failed to read spool file for verification: ${msg}` };
   }
-  const actual = (0, import_node_crypto5.createHash)("sha256").update(content, "utf8").digest("hex");
+  const actual = (0, import_node_crypto6.createHash)("sha256").update(content, "utf8").digest("hex");
   return {
     ok: true,
     value: { status: actual === expected ? "verified" : "tampered", expected, actual }
@@ -38993,11 +39239,11 @@ async function listSpoolFiles(spoolDir) {
     return { ok: false, error: `Failed to list spool files: ${msg}` };
   }
 }
-var import_node_crypto5, import_promises2, import_node_path7;
+var import_node_crypto6, import_promises2, import_node_path7;
 var init_spool_reader = __esm({
   "../qmd-team-intent-kb/packages/claude-runtime/dist/spool/spool-reader.js"() {
     "use strict";
-    import_node_crypto5 = require("node:crypto");
+    import_node_crypto6 = require("node:crypto");
     import_promises2 = require("node:fs/promises");
     import_node_path7 = require("node:path");
     init_dist();
@@ -39804,7 +40050,7 @@ function reject(candidate, pipelineResult, auditRepo, dryRun = false) {
   const reason = pipelineResult.rejectedBy !== void 0 ? `Rejected by rule: ${pipelineResult.rejectedBy}` : `Flagged by rules: ${pipelineResult.flaggedBy?.join(", ") ?? "unknown"}`;
   if (!dryRun) {
     auditRepo.insert(AuditEvent.parse({
-      id: (0, import_node_crypto6.randomUUID)(),
+      id: (0, import_node_crypto7.randomUUID)(),
       action: "deleted",
       memoryId: candidate.id,
       tenantId: candidate.tenantId,
@@ -39820,11 +40066,11 @@ function reject(candidate, pipelineResult, auditRepo, dryRun = false) {
   }
   return reason;
 }
-var import_node_crypto6;
+var import_node_crypto7;
 var init_rejector = __esm({
   "../qmd-team-intent-kb/apps/curator/dist/rejection/rejector.js"() {
     "use strict";
-    import_node_crypto6 = require("node:crypto");
+    import_node_crypto7 = require("node:crypto");
     init_dist();
   }
 });
@@ -40540,7 +40786,7 @@ var local_server_exports = {};
 __export(local_server_exports, {
   startLocalServer: () => startLocalServer
 });
-function jsonResult(obj) {
+function jsonResult2(obj) {
   return { content: [{ type: "text", text: JSON.stringify(obj, null, 2) }] };
 }
 function isMissingNativeDep(e) {
@@ -40565,11 +40811,11 @@ async function startLocalServer() {
 `
   );
 }
-var import_node_crypto7, import_zod17, import_node_path13, VERSION2, config, CATEGORIES, NATIVE_DEP_HINT, server2;
+var import_node_crypto8, import_zod17, import_node_path13, VERSION2, config, CATEGORIES2, NATIVE_DEP_HINT, server2;
 var init_local_server = __esm({
   "src/local-server.ts"() {
     "use strict";
-    import_node_crypto7 = require("node:crypto");
+    import_node_crypto8 = require("node:crypto");
     init_mcp();
     init_stdio2();
     import_zod17 = __toESM(require_zod(), 1);
@@ -40582,7 +40828,7 @@ var init_local_server = __esm({
     init_govern();
     VERSION2 = "1.0.0";
     config = resolveConfig();
-    CATEGORIES = [
+    CATEGORIES2 = [
       "decision",
       "pattern",
       "convention",
@@ -40607,7 +40853,7 @@ var init_local_server = __esm({
         const adapter = new QmdAdapter({ tenantId: config.tenantId, exportDir: config.exportDir });
         const res = await adapter.query(params.query, scope, config.tenantId);
         if (!res.ok) {
-          return jsonResult({
+          return jsonResult2({
             source: "local-qmd",
             query: params.query,
             scope,
@@ -40622,7 +40868,7 @@ var init_local_server = __esm({
           score: r.score,
           collection: r.collection
         }));
-        return jsonResult({ source: "local-qmd", query: params.query, scope, count: results.length, results });
+        return jsonResult2({ source: "local-qmd", query: params.query, scope, count: results.length, results });
       }
     );
     server2.tool(
@@ -40633,8 +40879,8 @@ var init_local_server = __esm({
         try {
           db = createDatabase({ path: config.dbPath, readonly: true });
         } catch (e) {
-          if (isMissingNativeDep(e)) return jsonResult({ total: 0, note: NATIVE_DEP_HINT });
-          return jsonResult({
+          if (isMissingNativeDep(e)) return jsonResult2({ total: 0, note: NATIVE_DEP_HINT });
+          return jsonResult2({
             total: 0,
             byLifecycle: {},
             byCategory: {},
@@ -40643,7 +40889,7 @@ var init_local_server = __esm({
         }
         try {
           const repo = new MemoryRepository(db);
-          return jsonResult({
+          return jsonResult2({
             total: repo.count(),
             byLifecycle: repo.countByLifecycle(),
             byCategory: repo.countByCategory()
@@ -40661,13 +40907,13 @@ var init_local_server = __esm({
         try {
           db = createDatabase({ path: config.dbPath, readonly: true });
         } catch (e) {
-          if (isMissingNativeDep(e)) return jsonResult({ ok: false, totalEvents: 0, note: NATIVE_DEP_HINT });
-          return jsonResult({ ok: true, totalEvents: 0, note: "Brain is empty \u2014 no audit chain yet." });
+          if (isMissingNativeDep(e)) return jsonResult2({ ok: false, totalEvents: 0, note: NATIVE_DEP_HINT });
+          return jsonResult2({ ok: true, totalEvents: 0, note: "Brain is empty \u2014 no audit chain yet." });
         }
         try {
           const auditRepo = new AuditRepository(db);
           const result = verifyAnchors(auditRepo, (0, import_node_path13.join)(config.basePath, "audit", "anchors.jsonl"));
-          return jsonResult({
+          return jsonResult2({
             ok: result.ok,
             totalEvents: result.chain.totalRows,
             cleanRows: result.chain.cleanRows,
@@ -40687,12 +40933,12 @@ var init_local_server = __esm({
       {
         title: import_zod17.z.string().min(1).describe("Short, specific title for the memory"),
         content: import_zod17.z.string().min(1).describe("The fact to remember, in full"),
-        category: import_zod17.z.enum(CATEGORIES).optional().describe("Memory category (default: reference)"),
+        category: import_zod17.z.enum(CATEGORIES2).optional().describe("Memory category (default: reference)"),
         filePaths: import_zod17.z.array(import_zod17.z.string()).optional().describe("Related file paths, if any")
       },
       async (params) => {
         const candidate = {
-          id: (0, import_node_crypto7.randomUUID)(),
+          id: (0, import_node_crypto8.randomUUID)(),
           status: "inbox",
           source: "mcp",
           content: params.content,
@@ -40707,9 +40953,9 @@ var init_local_server = __esm({
         };
         const res = await writeToSpool(candidate, config.spoolPath);
         if (!res.ok) {
-          return jsonResult({ ok: false, error: res.error });
+          return jsonResult2({ ok: false, error: res.error });
         }
-        return jsonResult({
+        return jsonResult2({
           ok: true,
           candidateId: candidate.id,
           message: "Captured to the spool. Run brain_govern to dedupe \u2192 policy \u2192 promote with a hash-chained receipt."
@@ -40724,7 +40970,7 @@ var init_local_server = __esm({
         try {
           s = await runGovern(config);
         } catch (e) {
-          if (isMissingNativeDep(e)) return jsonResult({ ok: false, error: "native-store-unavailable", message: NATIVE_DEP_HINT });
+          if (isMissingNativeDep(e)) return jsonResult2({ ok: false, error: "native-store-unavailable", message: NATIVE_DEP_HINT });
           throw e;
         }
         const parts = [
@@ -40737,7 +40983,7 @@ var init_local_server = __esm({
         if (!s.indexUpdated) {
           message += " Search index not refreshed \u2014 install qmd 2.x on PATH and re-run brain_govern to make new memories searchable.";
         }
-        return jsonResult({ ok: true, ...s, message });
+        return jsonResult2({ ok: true, ...s, message });
       }
     );
     server2.tool(
@@ -40755,7 +41001,7 @@ var init_local_server = __esm({
         try {
           db = createDatabase({ path: config.dbPath });
         } catch (e) {
-          if (isMissingNativeDep(e)) return jsonResult({ ok: false, error: "native-store-unavailable", message: NATIVE_DEP_HINT });
+          if (isMissingNativeDep(e)) return jsonResult2({ ok: false, error: "native-store-unavailable", message: NATIVE_DEP_HINT });
           throw e;
         }
         try {
@@ -40763,7 +41009,7 @@ var init_local_server = __esm({
           const auditRepo = new AuditRepository(db);
           const memory = memoryRepo.findById(params.memoryId);
           if (!memory) {
-            return jsonResult({ ok: false, error: `No memory found with id ${params.memoryId}` });
+            return jsonResult2({ ok: false, error: `No memory found with id ${params.memoryId}` });
           }
           const actor = { type: "human", id: params.actor ?? "owner" };
           const validation = validateTransition(memory.lifecycle, params.to, {
@@ -40772,14 +41018,14 @@ var init_local_server = __esm({
             supersededBy: params.supersededBy
           });
           if (!validation.valid) {
-            return jsonResult({ ok: false, error: validation.error });
+            return jsonResult2({ ok: false, error: validation.error });
           }
           const now = (/* @__PURE__ */ new Date()).toISOString();
           const action = params.to === "archived" ? "archived" : params.to === "superseded" ? "superseded" : "demoted";
           db.transaction(() => {
             memoryRepo.updateLifecycle(params.memoryId, params.to, now);
             auditRepo.insert({
-              id: (0, import_node_crypto7.randomUUID)(),
+              id: (0, import_node_crypto8.randomUUID)(),
               action,
               memoryId: params.memoryId,
               tenantId: memory.tenantId,
@@ -40789,7 +41035,7 @@ var init_local_server = __esm({
               timestamp: now
             });
           })();
-          return jsonResult({
+          return jsonResult2({
             ok: true,
             memoryId: params.memoryId,
             from: memory.lifecycle,
