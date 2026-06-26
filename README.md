@@ -3,7 +3,7 @@
 <p align="center">
   A local-first Claude Code + Cowork plugin: turn <em>your own</em> files into a governed,
   <code>qmd://</code>-cited second brain with a tamper-evident, SHA-256 hash-chained audit trail.<br>
-  <strong>Compile, then govern.</strong> Runs in-process — no daemon, no network, no API key for retrieval.
+  <strong>Compile, then govern.</strong> One plugin, two modes: <strong>local</strong> (default — in-process, no daemon, no network, no API key for retrieval) or <strong>team</strong> (proxy to a shared governed brain over your network).
 </p>
 
 <p align="center">
@@ -80,6 +80,27 @@ prompt). Requires Node 20+, a C/C++ toolchain (for `better-sqlite3`), and `qmd` 
 
 After it finishes, start a new Claude Code session — the `governed-brain` tools are live. For the
 `/brain` and `/brain-save` skills too, `claude plugin install governed-second-brain`.
+
+### Team mode — point it at a shared brain
+
+The **same** plugin runs in **team mode** when `TEAMKB_API_URL` is set: instead of an in-process local
+brain, it proxies to a shared governed-brain HTTP API (INTKB's `apps/api`) over your network — so a
+whole team queries and contributes to **one** governed brain. Set two environment variables:
+
+- **`TEAMKB_API_URL`** — your team brain's API base (e.g. `http://<host>:3847`)
+- **`TEAMKB_API_TOKEN`** — your personal bearer token (issued by the brain's operator)
+
+You need network reachability to that API — typically a private network / VPN such as **Tailscale**
+(the brain is meant to stay off the public internet). The dispatcher auto-detects mode from
+`TEAMKB_API_URL`: set → team, unset → local. Same `/brain` + `/brain-save` skills either way.
+
+In team mode the tool surface is **`brain_search`** (read) + **`brain_capture`** (propose) +
+**`brain_transition`** (admin-only) — govern runs server-side, so there's no client `brain_govern`:
+**the model proposes, the server disposes**, and each promotion gets a hash-chained receipt. A member
+token can read + propose; admin actions (transition) return a clear 403 otherwise.
+
+> Team mode is **dependency-free** — it uses only `fetch` + the MCP SDK, never the native store — so it
+> runs straight from a marketplace clone with zero build.
 
 <details><summary><strong>Build from source</strong> (to hack on the runtime)</summary>
 
