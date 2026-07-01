@@ -23,7 +23,9 @@
   },
   "scripts": {
     "build": "node build.mjs",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "verify-anchors": "node scripts/verify-anchors.mjs",
+    "verify-anchors:test": "node --test scripts/verify-anchors.test.mjs"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.29.0",
