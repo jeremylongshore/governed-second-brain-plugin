@@ -29,6 +29,7 @@ import { validateTransition } from '@qmd-team-intent-kb/schema';
 import type { MemoryCandidate } from '@qmd-team-intent-kb/schema';
 import { resolveConfig } from './config.js';
 import { runGovern } from './govern.js';
+import { anchorChainHead } from './anchor.js';
 
 const VERSION = '1.0.0';
 const config = resolveConfig();
@@ -290,12 +291,24 @@ server.tool(
           timestamp: now,
         });
       })();
+      // Re-anchor the chain head AFTER the durable audit write commits, so this
+      // transition's row is snapshotted into the external anchor log immediately
+      // — narrowing the rewrite-detection window to one write instead of one
+      // govern cycle (010-AT-RISK R3b). Best-effort: a failed anchor must NOT
+      // fail the transition; the memory move + audit event already committed.
+      // `committed:true` may be unpushed when there's no remote — a local-only
+      // witness, not external tamper-evidence (the verifier reports that as
+      // UNPUSHED_LOCAL_WITNESS), so we don't overclaim in the message.
+      const anchored = anchorChainHead(auditRepo, config.basePath, config.tenantId);
       return jsonResult({
         ok: true,
         memoryId: params.memoryId,
         from: memory.lifecycle,
         to: params.to,
-        message: 'Transition applied; hash-chained audit event written.',
+        anchored,
+        message: anchored
+          ? 'Transition applied; hash-chained audit event written and chain head re-anchored.'
+          : 'Transition applied; hash-chained audit event written. (External anchor skipped — best-effort; the durable write is unaffected.)',
       });
     } finally {
       db.close();

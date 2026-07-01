@@ -40716,7 +40716,7 @@ var init_seed_policy = __esm({
   }
 });
 
-// src/govern.ts
+// src/anchor.ts
 function commitAnchor(auditDir) {
   const env = {
     ...process.env,
@@ -40732,7 +40732,8 @@ function commitAnchor(auditDir) {
     git(["commit", "-q", "-m", `anchor ${(/* @__PURE__ */ new Date()).toISOString()}`]);
     try {
       (0, import_node_child_process3.execFileSync)("git", ["remote", "get-url", "origin"], { cwd: auditDir, stdio: "ignore" });
-      git(["push", "-q", "origin", "HEAD"]);
+      (0, import_node_child_process3.execFile)("git", ["push", "-q", "origin", "HEAD"], { cwd: auditDir, timeout: 15e3, env }, () => {
+      });
     } catch {
     }
     return true;
@@ -40740,6 +40741,32 @@ function commitAnchor(auditDir) {
     return false;
   }
 }
+function anchorChainHead(auditRepo, basePath, tenantId) {
+  try {
+    const auditDir = (0, import_node_path12.join)(basePath, "audit");
+    (0, import_node_fs6.mkdirSync)(auditDir, { recursive: true });
+    const rec = appendAnchor(auditRepo, (0, import_node_path12.join)(auditDir, "anchors.jsonl"), { tenantId });
+    return {
+      chainHead: rec.chainHead,
+      chainedRows: rec.chainedRows,
+      committed: commitAnchor(auditDir)
+    };
+  } catch {
+    return void 0;
+  }
+}
+var import_node_child_process3, import_node_fs6, import_node_path12;
+var init_anchor = __esm({
+  "src/anchor.ts"() {
+    "use strict";
+    init_dist3();
+    import_node_child_process3 = require("node:child_process");
+    import_node_fs6 = require("node:fs");
+    import_node_path12 = require("node:path");
+  }
+});
+
+// src/govern.ts
 async function runGovern(config2) {
   const db = createDatabase({ path: config2.dbPath });
   try {
@@ -40796,21 +40823,9 @@ async function runGovern(config2) {
     } catch (e) {
       indexError = e instanceof Error ? e.message : String(e);
     }
-    let anchored;
-    try {
-      const auditDir = (0, import_node_path12.join)(config2.basePath, "audit");
-      (0, import_node_fs6.mkdirSync)(auditDir, { recursive: true });
-      const rec = appendAnchor(auditRepo, (0, import_node_path12.join)(auditDir, "anchors.jsonl"), {
-        tenantId: config2.tenantId
-      });
-      anchored = {
-        chainHead: rec.chainHead,
-        chainedRows: rec.chainedRows,
-        committed: commitAnchor(auditDir)
-      };
-    } catch (e) {
-      process.stderr.write(`[govern] anchor failed: ${e instanceof Error ? e.message : String(e)}
-`);
+    const anchored = anchorChainHead(auditRepo, config2.basePath, config2.tenantId);
+    if (!anchored) {
+      process.stderr.write("[govern] anchor failed (best-effort; govern pass unaffected)\n");
     }
     return {
       ingested: candidates.length,
@@ -40828,7 +40843,6 @@ async function runGovern(config2) {
     db.close();
   }
 }
-var import_node_child_process3, import_node_fs6, import_node_path12;
 var init_govern = __esm({
   "src/govern.ts"() {
     "use strict";
@@ -40836,10 +40850,8 @@ var init_govern = __esm({
     init_dist9();
     init_dist3();
     init_dist4();
-    import_node_child_process3 = require("node:child_process");
-    import_node_fs6 = require("node:fs");
-    import_node_path12 = require("node:path");
     init_seed_policy();
+    init_anchor();
   }
 });
 
@@ -40888,6 +40900,7 @@ var init_local_server = __esm({
     init_dist();
     init_config3();
     init_govern();
+    init_anchor();
     VERSION2 = "1.0.0";
     config = resolveConfig();
     CATEGORIES2 = [
@@ -41097,12 +41110,14 @@ var init_local_server = __esm({
               timestamp: now
             });
           })();
+          const anchored = anchorChainHead(auditRepo, config.basePath, config.tenantId);
           return jsonResult2({
             ok: true,
             memoryId: params.memoryId,
             from: memory.lifecycle,
             to: params.to,
-            message: "Transition applied; hash-chained audit event written."
+            anchored,
+            message: anchored ? "Transition applied; hash-chained audit event written and chain head re-anchored." : "Transition applied; hash-chained audit event written. (External anchor skipped \u2014 best-effort; the durable write is unaffected.)"
           });
         } finally {
           db.close();

@@ -5,3 +5,5 @@ node_modules/
 *.tsbuildinfo
 .gsb-smoke/
 .gsb-repro/
+# transient esbuild output from scripts/anchor-on-transition.test.mjs (cleaned in after())
+scripts/.anchor-helper-*/

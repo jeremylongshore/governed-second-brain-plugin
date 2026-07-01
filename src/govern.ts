@@ -7,14 +7,11 @@ import {
   PolicyRepository,
   AuditRepository,
   ExportStateRepository,
-  appendAnchor,
 } from '@qmd-team-intent-kb/store';
 import { QmdAdapter } from '@qmd-team-intent-kb/qmd-adapter';
-import { execFileSync } from 'node:child_process';
-import { existsSync, mkdirSync } from 'node:fs';
-import { join } from 'node:path';
 import type { BrainConfig } from './config.js';
 import { seedDefaultPolicy } from './seed-policy.js';
+import { anchorChainHead } from './anchor.js';
 
 /**
  * Result of one in-process govern pass — what the deterministic pipeline did
@@ -32,38 +29,6 @@ export interface GovernSummary {
   indexError?: string;
   /** External anchor of the audit chain head (append-only log, git-committed). */
   anchored?: { chainHead: string; chainedRows: number; committed: boolean };
-}
-
-/**
- * Commit the anchor log to a small git repo under <base>/audit, so a later local
- * rewrite of the audit chain is detectable against git's content-addressed
- * history. If the user has added a remote to that repo, push to it — that remote
- * is the true external tamper-evidence (an offline editor cannot quietly rewrite
- * a pushed history). Best-effort: never fails the govern pass.
- */
-function commitAnchor(auditDir: string): boolean {
-  const env = {
-    ...process.env,
-    GIT_AUTHOR_NAME: 'governed-brain',
-    GIT_AUTHOR_EMAIL: 'anchor@localhost',
-    GIT_COMMITTER_NAME: 'governed-brain',
-    GIT_COMMITTER_EMAIL: 'anchor@localhost',
-  };
-  const git = (args: string[]) => execFileSync('git', args, { cwd: auditDir, stdio: 'ignore', env });
-  try {
-    if (!existsSync(join(auditDir, '.git'))) git(['init', '-q']);
-    git(['add', 'anchors.jsonl']);
-    git(['commit', '-q', '-m', `anchor ${new Date().toISOString()}`]);
-    try {
-      execFileSync('git', ['remote', 'get-url', 'origin'], { cwd: auditDir, stdio: 'ignore' });
-      git(['push', '-q', 'origin', 'HEAD']);
-    } catch {
-      /* no remote configured — local git history is the anchor until one is added */
-    }
-    return true;
-  } catch {
-    return false;
-  }
 }
 
 /**
@@ -153,20 +118,10 @@ export async function runGovern(config: BrainConfig): Promise<GovernSummary> {
 
     // 5. Anchor the chain head externally — snapshot to an append-only, hash-chained
     //    log and commit it to git (the tamper-evidence verifyAnchors checks against).
-    let anchored: GovernSummary['anchored'];
-    try {
-      const auditDir = join(config.basePath, 'audit');
-      mkdirSync(auditDir, { recursive: true });
-      const rec = appendAnchor(auditRepo, join(auditDir, 'anchors.jsonl'), {
-        tenantId: config.tenantId,
-      });
-      anchored = {
-        chainHead: rec.chainHead,
-        chainedRows: rec.chainedRows,
-        committed: commitAnchor(auditDir),
-      };
-    } catch (e) {
-      process.stderr.write(`[govern] anchor failed: ${e instanceof Error ? e.message : String(e)}\n`);
+    //    Shared with brain_transition so every durable audit write re-anchors.
+    const anchored = anchorChainHead(auditRepo, config.basePath, config.tenantId);
+    if (!anchored) {
+      process.stderr.write('[govern] anchor failed (best-effort; govern pass unaffected)\n');
     }
 
     return {
