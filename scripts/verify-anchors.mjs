@@ -57,13 +57,23 @@ import { homedir } from 'node:os';
 
 function parseArgs(argv) {
   const out = { anchors: null, auditDir: null, db: null, json: false, help: false };
+  // A value-taking option must be followed by a real value — not the end of the
+  // args and not another flag. Otherwise `--anchors --json` would silently eat
+  // `--json` as the path, and a trailing `--db` would set it to undefined.
+  const take = (i, opt) => {
+    const val = argv[i + 1];
+    if (val === undefined || val.startsWith('-')) {
+      throw new UsageError(`option ${opt} requires an argument`);
+    }
+    return val;
+  };
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i];
     if (a === '--json') out.json = true;
     else if (a === '--help' || a === '-h') out.help = true;
-    else if (a === '--anchors') out.anchors = argv[++i];
-    else if (a === '--audit-dir') out.auditDir = argv[++i];
-    else if (a === '--db') out.db = argv[++i];
+    else if (a === '--anchors') { out.anchors = take(i, '--anchors'); i++; }
+    else if (a === '--audit-dir') { out.auditDir = take(i, '--audit-dir'); i++; }
+    else if (a === '--db') { out.db = take(i, '--db'); i++; }
     else if (a.startsWith('--anchors=')) out.anchors = a.slice('--anchors='.length);
     else if (a.startsWith('--audit-dir=')) out.auditDir = a.slice('--audit-dir='.length);
     else if (a.startsWith('--db=')) out.db = a.slice('--db='.length);

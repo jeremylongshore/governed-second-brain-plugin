@@ -287,3 +287,15 @@ test('CLI exits 2 when the anchors file is missing', () => {
   );
   assert.equal(r.status, 2);
 });
+
+// A value-taking option must be followed by a real value — a trailing option, or
+// one immediately followed by another flag, is a usage error (exit 2), not a
+// silent undefined / flag-eaten-as-value. (Gemini review, PR #12.)
+const CLI = new URL('./verify-anchors.mjs', import.meta.url).pathname;
+for (const argv of [['--anchors'], ['--db'], ['--audit-dir'], ['--anchors', '--json'], ['--db', '--anchors', 'x']]) {
+  test(`CLI exits 2 on missing value: [${argv.join(' ')}]`, () => {
+    const r = spawnSync('node', [CLI, ...argv], { encoding: 'utf8' });
+    assert.equal(r.status, 2, `expected usage exit 2, got ${r.status}`);
+    assert.match(r.stderr + r.stdout, /requires an argument/);
+  });
+}
