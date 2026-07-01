@@ -13,6 +13,7 @@
  *   WRITE: brain_capture, brain_govern, brain_transition
  */
 import { randomUUID } from 'node:crypto';
+import { existsSync } from 'node:fs';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { z } from 'zod';
@@ -22,6 +23,10 @@ import {
   MemoryRepository,
   AuditRepository,
   verifyAnchors,
+  readManifest,
+  classifyChainBreaks,
+  type ExceptionManifest,
+  type StoredRowTuple,
 } from '@qmd-team-intent-kb/store';
 import { QmdAdapter } from '@qmd-team-intent-kb/qmd-adapter';
 import { writeToSpool } from '@qmd-team-intent-kb/claude-runtime';
@@ -65,6 +70,81 @@ function isMissingNativeDep(e: unknown): boolean {
 
 const NATIVE_DEP_HINT =
   "The brain's local store (better-sqlite3) isn't built for this machine. Run `npx governed-second-brain init <folder>` once — it builds the native module and registers the MCP — then retry. (Capture still works without it; only the governed store does not.)";
+
+/** Default on-disk path of the byte-pinned audit-break exception manifest. */
+function manifestPath(basePath: string): string {
+  return join(basePath, 'audit', 'exceptions.manifest.json');
+}
+
+/**
+ * Load the audit-break exception manifest if it exists, else null. A missing
+ * manifest is the common case (the live brain's 155 breaks are ALL benign
+ * CHAIN_FORKs — no hash amnesty is needed), and null is a valid input to the
+ * classifier: with no amnesty, every tamper-reason break is a tamper signature.
+ * A manifest that FAILS its integrity gates (bad hash / count drift / malformed)
+ * is treated as absent rather than trusted — fail-closed, never launder.
+ */
+function loadExceptionManifest(basePath: string): ExceptionManifest | null {
+  const p = manifestPath(basePath);
+  if (!existsSync(p)) return null;
+  try {
+    return readManifest(p);
+  } catch (e) {
+    // Fail-closed under ANY failure — an ExceptionManifestError (bad hash / count
+    // drift), a SyntaxError from corrupt JSON, or an fs error must all be treated
+    // as "no manifest" rather than trusted or crashing brain_audit_verify. Never
+    // launder; never let a malformed amnesty file take down verification. (Gemini review.)
+    process.stderr.write(
+      `[audit-verify] exception manifest ignored (treated as absent): ${e instanceof Error ? e.message : String(e)}\n`,
+    );
+    return null;
+  }
+}
+
+/**
+ * Build the classifier's `rowsById` map — audit row id → its CURRENT stored
+ * `{entry_hash, prev_entry_hash, hash_version, seq}`. The classifier reads the
+ * live DB tuple (not the manifest's recorded one) so it can byte-match and
+ * catch drift. `findAllChronological()` returns `SELECT *` rows, so the raw
+ * `seq` column is present even though the typed row shape omits it.
+ */
+function buildRowsById(auditRepo: AuditRepository): Map<string, StoredRowTuple> {
+  const rowsById = new Map<string, StoredRowTuple>();
+  for (const row of auditRepo.findAllChronological()) {
+    const raw = row as unknown as { seq?: number };
+    rowsById.set(row.id, {
+      entry_hash: row.entry_hash,
+      prev_entry_hash: row.prev_entry_hash,
+      hash_version: row.hash_version ?? 1,
+      seq: raw.seq ?? 0,
+    });
+  }
+  return rowsById;
+}
+
+/**
+ * Compose the newcomer-safe clean-chain message. Never calls a benign
+ * ordering fork "tamper"; omits zero-count clauses so the common all-clean
+ * case reads simply.
+ */
+function honestCleanMessage(
+  totalEvents: number,
+  forkCount: number,
+  exceptionCount: number,
+  anchorCount: number,
+): string {
+  const parts = ['0 tamper signatures'];
+  if (forkCount > 0) {
+    parts.push(`${forkCount} benign chain-ordering fork(s) (known artifact)`);
+  }
+  if (exceptionCount > 0) {
+    parts.push(`${exceptionCount} documented exception(s)`);
+  }
+  return (
+    `Audit chain verified over ${totalEvents} event(s): ${parts.join(', ')}, ` +
+    `consistent with ${anchorCount} external anchor(s).`
+  );
+}
 
 const server = new McpServer({ name: 'governed-brain', version: VERSION });
 
@@ -147,8 +227,17 @@ server.tool(
 
 server.tool(
   'brain_audit_verify',
-  "Verify the integrity of your brain's audit trail — the SHA-256 hash chain AND the external anchor log. Reports any tamper: a broken hash link, or a silent rewrite of history the chain alone would miss (caught by cross-checking the anchored snapshots). Read-only.",
-  async () => {
+  "Verify the integrity of your brain's audit trail — the SHA-256 hash chain AND the external anchor log. Reports an honest 3-state summary: tamper signatures (a broken hash link, or a silent rewrite of history caught by cross-checking the anchored snapshots), documented migration exceptions, and benign chain-ordering forks. Read-only.",
+  {
+    verbose: z
+      .boolean()
+      .optional()
+      .describe(
+        'Include the raw per-break detail arrays (row ids, tenants). Default false — the summary reports counts only, to avoid leaking row identity on a read surface an outsider may hit.',
+      ),
+  },
+  async (params) => {
+    const verbose = params.verbose ?? false;
     let db;
     try {
       db = createDatabase({ path: config.dbPath, readonly: true });
@@ -159,16 +248,54 @@ server.tool(
     try {
       const auditRepo = new AuditRepository(db);
       const result = verifyAnchors(auditRepo, join(config.basePath, 'audit', 'anchors.jsonl'));
-      return jsonResult({
-        ok: result.ok,
+
+      // Partition the raw breaks the walker found into an honest 3-state view:
+      // tamper signatures vs documented migration exceptions vs benign ordering
+      // forks. Load the byte-pinned exception manifest if present (else null →
+      // every tamper-reason break is a tamper signature; benign forks stay
+      // benign). rowsById is the DB's CURRENT stored tuple per audit row, so the
+      // classifier can byte-match against the manifest and catch drift.
+      const manifest = loadExceptionManifest(config.basePath);
+      const rowsById = buildRowsById(auditRepo);
+      const classified = classifyChainBreaks(result.chain.breaks, manifest, rowsById);
+
+      const tamperCount = classified.tamperSignatures.length;
+      const exceptionCount = classified.documentedExceptions.length;
+      const forkCount = classified.chainForks.length;
+      const anchorBreakCount = result.anchorBreaks.length;
+
+      // `ok` reflects NO-TAMPERING, not a strict zero-breaks chain. Benign
+      // ordering forks and documented, byte-pinned migration exceptions do not
+      // make the brain "not ok". Anchor breaks are always tamper-grade.
+      const ok = tamperCount === 0 && anchorBreakCount === 0;
+
+      const message = ok
+        ? honestCleanMessage(result.chain.totalRows, forkCount, exceptionCount, result.anchorCount)
+        : `⚠ TAMPER DETECTED — ${tamperCount} tamper signature(s), ${anchorBreakCount} anchor break(s).`;
+
+      // Default response is counts-only. The raw breaks[]/anchorBreaks[] arrays
+      // carry row ids + tenant (an info-disclosure oracle on a read surface an
+      // outsider may hit — R8), so they are gated behind an explicit `verbose`.
+      const base = {
+        ok,
         totalEvents: result.chain.totalRows,
         cleanRows: result.chain.cleanRows,
-        chainBreaks: result.chain.breaks,
+        tamperSignatures: tamperCount,
+        documentedExceptions: exceptionCount,
+        chainForks: forkCount,
         anchorCount: result.anchorCount,
-        anchorBreaks: result.anchorBreaks,
-        message: result.ok
-          ? `Audit chain intact (${result.chain.totalRows} events), consistent with ${result.anchorCount} external anchor(s).`
-          : `⚠ TAMPER DETECTED — ${result.chain.breaks.length} chain break(s), ${result.anchorBreaks.length} anchor break(s).`,
+        anchorBreaks: anchorBreakCount,
+        message,
+      };
+      if (!verbose) return jsonResult(base);
+      return jsonResult({
+        ...base,
+        detail: {
+          tamperSignatures: classified.tamperSignatures,
+          documentedExceptions: classified.documentedExceptions,
+          chainForks: classified.chainForks,
+          anchorBreaks: result.anchorBreaks,
+        },
       });
     } finally {
       db.close();

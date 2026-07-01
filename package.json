@@ -26,7 +26,8 @@
     "typecheck": "tsc --noEmit",
     "verify-anchors": "node scripts/verify-anchors.mjs",
     "verify-anchors:test": "node --test scripts/verify-anchors.test.mjs",
-    "anchor-on-transition:test": "node --test scripts/anchor-on-transition.test.mjs"
+    "anchor-on-transition:test": "node --test scripts/anchor-on-transition.test.mjs",
+    "audit-verify-banner:test": "node --test smoke/audit-verify-banner.test.mjs"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.29.0",

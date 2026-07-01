@@ -4208,10 +4208,10 @@ var require_v3 = __commonJS({
     };
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.z = void 0;
-    var z18 = __importStar(require_external());
-    exports2.z = z18;
+    var z19 = __importStar(require_external());
+    exports2.z = z19;
     __exportStar(require_external(), exports2);
-    exports2.default = z18;
+    exports2.default = z19;
   }
 });
 
@@ -20023,8 +20023,8 @@ var require_v4_mini = __commonJS({
     };
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.z = void 0;
-    var z18 = __importStar(require_external2());
-    exports2.z = z18;
+    var z19 = __importStar(require_external2());
+    exports2.z = z19;
     __exportStar(require_external2(), exports2);
   }
 });
@@ -22009,7 +22009,7 @@ var require_from_json_schema = __commonJS({
     var _checks = __importStar(require_checks3());
     var _iso = __importStar(require_iso2());
     var _schemas = __importStar(require_schemas3());
-    var z18 = {
+    var z19 = {
       ..._schemas,
       ..._checks,
       iso: _iso
@@ -22119,7 +22119,7 @@ var require_from_json_schema = __commonJS({
     function convertBaseSchema(schema, ctx) {
       if (schema.not !== void 0) {
         if (typeof schema.not === "object" && Object.keys(schema.not).length === 0) {
-          return z18.never();
+          return z19.never();
         }
         throw new Error("not is not supported in Zod (except { not: {} } for never)");
       }
@@ -22141,7 +22141,7 @@ var require_from_json_schema = __commonJS({
           return ctx.refs.get(refPath);
         }
         if (ctx.processing.has(refPath)) {
-          return z18.lazy(() => {
+          return z19.lazy(() => {
             if (!ctx.refs.has(refPath)) {
               throw new Error(`Circular reference not resolved: ${refPath}`);
             }
@@ -22158,25 +22158,25 @@ var require_from_json_schema = __commonJS({
       if (schema.enum !== void 0) {
         const enumValues = schema.enum;
         if (ctx.version === "openapi-3.0" && schema.nullable === true && enumValues.length === 1 && enumValues[0] === null) {
-          return z18.null();
+          return z19.null();
         }
         if (enumValues.length === 0) {
-          return z18.never();
+          return z19.never();
         }
         if (enumValues.length === 1) {
-          return z18.literal(enumValues[0]);
+          return z19.literal(enumValues[0]);
         }
         if (enumValues.every((v) => typeof v === "string")) {
-          return z18.enum(enumValues);
+          return z19.enum(enumValues);
         }
-        const literalSchemas = enumValues.map((v) => z18.literal(v));
+        const literalSchemas = enumValues.map((v) => z19.literal(v));
         if (literalSchemas.length < 2) {
           return literalSchemas[0];
         }
-        return z18.union([literalSchemas[0], literalSchemas[1], ...literalSchemas.slice(2)]);
+        return z19.union([literalSchemas[0], literalSchemas[1], ...literalSchemas.slice(2)]);
       }
       if (schema.const !== void 0) {
-        return z18.literal(schema.const);
+        return z19.literal(schema.const);
       }
       const type = schema.type;
       if (Array.isArray(type)) {
@@ -22185,68 +22185,68 @@ var require_from_json_schema = __commonJS({
           return convertBaseSchema(typeSchema, ctx);
         });
         if (typeSchemas.length === 0) {
-          return z18.never();
+          return z19.never();
         }
         if (typeSchemas.length === 1) {
           return typeSchemas[0];
         }
-        return z18.union(typeSchemas);
+        return z19.union(typeSchemas);
       }
       if (!type) {
-        return z18.any();
+        return z19.any();
       }
       let zodSchema;
       switch (type) {
         case "string": {
-          let stringSchema = z18.string();
+          let stringSchema = z19.string();
           if (schema.format) {
             const format = schema.format;
             if (format === "email") {
-              stringSchema = stringSchema.check(z18.email());
+              stringSchema = stringSchema.check(z19.email());
             } else if (format === "uri" || format === "uri-reference") {
-              stringSchema = stringSchema.check(z18.url());
+              stringSchema = stringSchema.check(z19.url());
             } else if (format === "uuid" || format === "guid") {
-              stringSchema = stringSchema.check(z18.uuid());
+              stringSchema = stringSchema.check(z19.uuid());
             } else if (format === "date-time") {
-              stringSchema = stringSchema.check(z18.iso.datetime());
+              stringSchema = stringSchema.check(z19.iso.datetime());
             } else if (format === "date") {
-              stringSchema = stringSchema.check(z18.iso.date());
+              stringSchema = stringSchema.check(z19.iso.date());
             } else if (format === "time") {
-              stringSchema = stringSchema.check(z18.iso.time());
+              stringSchema = stringSchema.check(z19.iso.time());
             } else if (format === "duration") {
-              stringSchema = stringSchema.check(z18.iso.duration());
+              stringSchema = stringSchema.check(z19.iso.duration());
             } else if (format === "ipv4") {
-              stringSchema = stringSchema.check(z18.ipv4());
+              stringSchema = stringSchema.check(z19.ipv4());
             } else if (format === "ipv6") {
-              stringSchema = stringSchema.check(z18.ipv6());
+              stringSchema = stringSchema.check(z19.ipv6());
             } else if (format === "mac") {
-              stringSchema = stringSchema.check(z18.mac());
+              stringSchema = stringSchema.check(z19.mac());
             } else if (format === "cidr") {
-              stringSchema = stringSchema.check(z18.cidrv4());
+              stringSchema = stringSchema.check(z19.cidrv4());
             } else if (format === "cidr-v6") {
-              stringSchema = stringSchema.check(z18.cidrv6());
+              stringSchema = stringSchema.check(z19.cidrv6());
             } else if (format === "base64") {
-              stringSchema = stringSchema.check(z18.base64());
+              stringSchema = stringSchema.check(z19.base64());
             } else if (format === "base64url") {
-              stringSchema = stringSchema.check(z18.base64url());
+              stringSchema = stringSchema.check(z19.base64url());
             } else if (format === "e164") {
-              stringSchema = stringSchema.check(z18.e164());
+              stringSchema = stringSchema.check(z19.e164());
             } else if (format === "jwt") {
-              stringSchema = stringSchema.check(z18.jwt());
+              stringSchema = stringSchema.check(z19.jwt());
             } else if (format === "emoji") {
-              stringSchema = stringSchema.check(z18.emoji());
+              stringSchema = stringSchema.check(z19.emoji());
             } else if (format === "nanoid") {
-              stringSchema = stringSchema.check(z18.nanoid());
+              stringSchema = stringSchema.check(z19.nanoid());
             } else if (format === "cuid") {
-              stringSchema = stringSchema.check(z18.cuid());
+              stringSchema = stringSchema.check(z19.cuid());
             } else if (format === "cuid2") {
-              stringSchema = stringSchema.check(z18.cuid2());
+              stringSchema = stringSchema.check(z19.cuid2());
             } else if (format === "ulid") {
-              stringSchema = stringSchema.check(z18.ulid());
+              stringSchema = stringSchema.check(z19.ulid());
             } else if (format === "xid") {
-              stringSchema = stringSchema.check(z18.xid());
+              stringSchema = stringSchema.check(z19.xid());
             } else if (format === "ksuid") {
-              stringSchema = stringSchema.check(z18.ksuid());
+              stringSchema = stringSchema.check(z19.ksuid());
             }
           }
           if (typeof schema.minLength === "number") {
@@ -22263,7 +22263,7 @@ var require_from_json_schema = __commonJS({
         }
         case "number":
         case "integer": {
-          let numberSchema = type === "integer" ? z18.number().int() : z18.number();
+          let numberSchema = type === "integer" ? z19.number().int() : z19.number();
           if (typeof schema.minimum === "number") {
             numberSchema = numberSchema.min(schema.minimum);
           }
@@ -22287,11 +22287,11 @@ var require_from_json_schema = __commonJS({
           break;
         }
         case "boolean": {
-          zodSchema = z18.boolean();
+          zodSchema = z19.boolean();
           break;
         }
         case "null": {
-          zodSchema = z18.null();
+          zodSchema = z19.null();
           break;
         }
         case "object": {
@@ -22304,14 +22304,14 @@ var require_from_json_schema = __commonJS({
           }
           if (schema.propertyNames) {
             const keySchema = convertSchema(schema.propertyNames, ctx);
-            const valueSchema = schema.additionalProperties && typeof schema.additionalProperties === "object" ? convertSchema(schema.additionalProperties, ctx) : z18.any();
+            const valueSchema = schema.additionalProperties && typeof schema.additionalProperties === "object" ? convertSchema(schema.additionalProperties, ctx) : z19.any();
             if (Object.keys(shape).length === 0) {
-              zodSchema = z18.record(keySchema, valueSchema);
+              zodSchema = z19.record(keySchema, valueSchema);
               break;
             }
-            const objectSchema2 = z18.object(shape).passthrough();
-            const recordSchema = z18.looseRecord(keySchema, valueSchema);
-            zodSchema = z18.intersection(objectSchema2, recordSchema);
+            const objectSchema2 = z19.object(shape).passthrough();
+            const recordSchema = z19.looseRecord(keySchema, valueSchema);
+            zodSchema = z19.intersection(objectSchema2, recordSchema);
             break;
           }
           if (schema.patternProperties) {
@@ -22320,28 +22320,28 @@ var require_from_json_schema = __commonJS({
             const looseRecords = [];
             for (const pattern of patternKeys) {
               const patternValue = convertSchema(patternProps[pattern], ctx);
-              const keySchema = z18.string().regex(new RegExp(pattern));
-              looseRecords.push(z18.looseRecord(keySchema, patternValue));
+              const keySchema = z19.string().regex(new RegExp(pattern));
+              looseRecords.push(z19.looseRecord(keySchema, patternValue));
             }
             const schemasToIntersect = [];
             if (Object.keys(shape).length > 0) {
-              schemasToIntersect.push(z18.object(shape).passthrough());
+              schemasToIntersect.push(z19.object(shape).passthrough());
             }
             schemasToIntersect.push(...looseRecords);
             if (schemasToIntersect.length === 0) {
-              zodSchema = z18.object({}).passthrough();
+              zodSchema = z19.object({}).passthrough();
             } else if (schemasToIntersect.length === 1) {
               zodSchema = schemasToIntersect[0];
             } else {
-              let result = z18.intersection(schemasToIntersect[0], schemasToIntersect[1]);
+              let result = z19.intersection(schemasToIntersect[0], schemasToIntersect[1]);
               for (let i = 2; i < schemasToIntersect.length; i++) {
-                result = z18.intersection(result, schemasToIntersect[i]);
+                result = z19.intersection(result, schemasToIntersect[i]);
               }
               zodSchema = result;
             }
             break;
           }
-          const objectSchema = z18.object(shape);
+          const objectSchema = z19.object(shape);
           if (schema.additionalProperties === false) {
             zodSchema = objectSchema.strict();
           } else if (typeof schema.additionalProperties === "object") {
@@ -22358,33 +22358,33 @@ var require_from_json_schema = __commonJS({
             const tupleItems = prefixItems.map((item) => convertSchema(item, ctx));
             const rest = items && typeof items === "object" && !Array.isArray(items) ? convertSchema(items, ctx) : void 0;
             if (rest) {
-              zodSchema = z18.tuple(tupleItems).rest(rest);
+              zodSchema = z19.tuple(tupleItems).rest(rest);
             } else {
-              zodSchema = z18.tuple(tupleItems);
+              zodSchema = z19.tuple(tupleItems);
             }
             if (typeof schema.minItems === "number") {
-              zodSchema = zodSchema.check(z18.minLength(schema.minItems));
+              zodSchema = zodSchema.check(z19.minLength(schema.minItems));
             }
             if (typeof schema.maxItems === "number") {
-              zodSchema = zodSchema.check(z18.maxLength(schema.maxItems));
+              zodSchema = zodSchema.check(z19.maxLength(schema.maxItems));
             }
           } else if (Array.isArray(items)) {
             const tupleItems = items.map((item) => convertSchema(item, ctx));
             const rest = schema.additionalItems && typeof schema.additionalItems === "object" ? convertSchema(schema.additionalItems, ctx) : void 0;
             if (rest) {
-              zodSchema = z18.tuple(tupleItems).rest(rest);
+              zodSchema = z19.tuple(tupleItems).rest(rest);
             } else {
-              zodSchema = z18.tuple(tupleItems);
+              zodSchema = z19.tuple(tupleItems);
             }
             if (typeof schema.minItems === "number") {
-              zodSchema = zodSchema.check(z18.minLength(schema.minItems));
+              zodSchema = zodSchema.check(z19.minLength(schema.minItems));
             }
             if (typeof schema.maxItems === "number") {
-              zodSchema = zodSchema.check(z18.maxLength(schema.maxItems));
+              zodSchema = zodSchema.check(z19.maxLength(schema.maxItems));
             }
           } else if (items !== void 0) {
             const element = convertSchema(items, ctx);
-            let arraySchema = z18.array(element);
+            let arraySchema = z19.array(element);
             if (typeof schema.minItems === "number") {
               arraySchema = arraySchema.min(schema.minItems);
             }
@@ -22393,7 +22393,7 @@ var require_from_json_schema = __commonJS({
             }
             zodSchema = arraySchema;
           } else {
-            zodSchema = z18.array(z18.any());
+            zodSchema = z19.array(z19.any());
           }
           break;
         }
@@ -22404,37 +22404,37 @@ var require_from_json_schema = __commonJS({
     }
     function convertSchema(schema, ctx) {
       if (typeof schema === "boolean") {
-        return schema ? z18.any() : z18.never();
+        return schema ? z19.any() : z19.never();
       }
       let baseSchema = convertBaseSchema(schema, ctx);
       const hasExplicitType = schema.type || schema.enum !== void 0 || schema.const !== void 0;
       if (schema.anyOf && Array.isArray(schema.anyOf)) {
         const options = schema.anyOf.map((s) => convertSchema(s, ctx));
-        const anyOfUnion = z18.union(options);
-        baseSchema = hasExplicitType ? z18.intersection(baseSchema, anyOfUnion) : anyOfUnion;
+        const anyOfUnion = z19.union(options);
+        baseSchema = hasExplicitType ? z19.intersection(baseSchema, anyOfUnion) : anyOfUnion;
       }
       if (schema.oneOf && Array.isArray(schema.oneOf)) {
         const options = schema.oneOf.map((s) => convertSchema(s, ctx));
-        const oneOfUnion = z18.xor(options);
-        baseSchema = hasExplicitType ? z18.intersection(baseSchema, oneOfUnion) : oneOfUnion;
+        const oneOfUnion = z19.xor(options);
+        baseSchema = hasExplicitType ? z19.intersection(baseSchema, oneOfUnion) : oneOfUnion;
       }
       if (schema.allOf && Array.isArray(schema.allOf)) {
         if (schema.allOf.length === 0) {
-          baseSchema = hasExplicitType ? baseSchema : z18.any();
+          baseSchema = hasExplicitType ? baseSchema : z19.any();
         } else {
           let result = hasExplicitType ? baseSchema : convertSchema(schema.allOf[0], ctx);
           const startIdx = hasExplicitType ? 0 : 1;
           for (let i = startIdx; i < schema.allOf.length; i++) {
-            result = z18.intersection(result, convertSchema(schema.allOf[i], ctx));
+            result = z19.intersection(result, convertSchema(schema.allOf[i], ctx));
           }
           baseSchema = result;
         }
       }
       if (schema.nullable === true && ctx.version === "openapi-3.0") {
-        baseSchema = z18.nullable(baseSchema);
+        baseSchema = z19.nullable(baseSchema);
       }
       if (schema.readOnly === true) {
-        baseSchema = z18.readonly(baseSchema);
+        baseSchema = z19.readonly(baseSchema);
       }
       if (schema.default !== void 0) {
         baseSchema = baseSchema.default(schema.default);
@@ -22467,7 +22467,7 @@ var require_from_json_schema = __commonJS({
     }
     function fromJSONSchema(schema, params) {
       if (typeof schema === "boolean") {
-        return schema ? z18.any() : z18.never();
+        return schema ? z19.any() : z19.never();
       }
       let normalized;
       try {
@@ -22704,10 +22704,10 @@ var require_classic = __commonJS({
     };
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.z = void 0;
-    var z18 = __importStar(require_external3());
-    exports2.z = z18;
+    var z19 = __importStar(require_external3());
+    exports2.z = z19;
     __exportStar(require_external3(), exports2);
-    exports2.default = z18;
+    exports2.default = z19;
   }
 });
 
@@ -34595,10 +34595,10 @@ var require_zod = __commonJS({
     };
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.z = void 0;
-    var z18 = __importStar(require_external3());
-    exports2.z = z18;
+    var z19 = __importStar(require_external3());
+    exports2.z = z19;
     __exportStar(require_external3(), exports2);
-    exports2.default = z18;
+    exports2.default = z19;
   }
 });
 
@@ -38010,6 +38010,159 @@ var init_audit_anchor = __esm({
   }
 });
 
+// ../qmd-team-intent-kb/packages/store/dist/exception-manifest.js
+function sortedEntries(entries) {
+  return [...entries].sort((a, b) => {
+    if (a.seq !== b.seq)
+      return a.seq - b.seq;
+    return a.id < b.id ? -1 : a.id > b.id ? 1 : 0;
+  });
+}
+function manifestBodyJson(body) {
+  return JSON.stringify({
+    schemaVersion: body.schemaVersion,
+    brainId: body.brainId ?? null,
+    generatedAt: body.generatedAt,
+    entryCount: body.entryCount,
+    entries: sortedEntries(body.entries).map((e) => ({
+      id: e.id,
+      entryHash: e.entryHash,
+      prevEntryHash: e.prevEntryHash,
+      hashVersion: e.hashVersion,
+      seq: e.seq,
+      reason: e.reason
+    }))
+  });
+}
+function computeManifestHash(body) {
+  return (0, import_node_crypto6.createHash)("sha256").update(manifestBodyJson(body), "utf8").digest("hex");
+}
+function readManifest(path) {
+  let raw;
+  try {
+    raw = (0, import_node_fs3.readFileSync)(path, "utf8");
+  } catch (e) {
+    throw new ExceptionManifestError(`cannot read manifest at ${path}: ${String(e)}`);
+  }
+  let parsed;
+  try {
+    parsed = JSON.parse(raw);
+  } catch (e) {
+    throw new ExceptionManifestError(`manifest at ${path} is not valid JSON: ${String(e)}`);
+  }
+  const result = ExceptionManifestSchema.safeParse(parsed);
+  if (!result.success) {
+    const issues = result.error.issues.map((i) => `${i.path.join(".") || "<root>"}: ${i.message}`);
+    throw new ExceptionManifestError(`manifest at ${path} failed schema validation: ${issues.join("; ")}`);
+  }
+  const m = result.data;
+  if (m.entries.length !== m.entryCount) {
+    throw new ExceptionManifestError(`manifest at ${path}: entryCount ${m.entryCount} != entries.length ${m.entries.length} (count drift / tampered manifest)`);
+  }
+  const body = {
+    schemaVersion: 1,
+    ...m.brainId !== void 0 && m.brainId !== null ? { brainId: m.brainId } : {},
+    generatedAt: m.generatedAt,
+    entryCount: m.entryCount,
+    entries: m.entries
+  };
+  const recomputed = computeManifestHash(body);
+  if (recomputed !== m.manifestHash) {
+    throw new ExceptionManifestError(`manifest at ${path}: manifestHash mismatch (recomputed ${recomputed} != stored ${m.manifestHash}) \u2014 manifest content was edited`);
+  }
+  return { ...body, manifestHash: m.manifestHash };
+}
+function classifyChainBreaks(breaks, manifest, rowsById) {
+  const manifestById = /* @__PURE__ */ new Map();
+  if (manifest) {
+    for (const e of manifest.entries)
+      manifestById.set(e.id, e);
+  }
+  const documentedExceptions = [];
+  const tamperSignatures = [];
+  const chainForks = [];
+  for (const brk of breaks) {
+    if (brk.reason === "CHAIN_FORK") {
+      chainForks.push(brk);
+      continue;
+    }
+    const entry = manifestById.get(brk.id);
+    const stored = rowsById.get(brk.id);
+    const isDocumented = entry !== void 0 && stored !== void 0 && // Byte-match the CURRENT stored tuple against the pinned tuple. `===` is
+    // null-aware: a null pin matches a null stored hash, and a null→value (or
+    // value→null) drift is unequal, so it correctly falls through to tamper.
+    stored.entry_hash === entry.entryHash && stored.prev_entry_hash === entry.prevEntryHash && stored.hash_version === entry.hashVersion && stored.seq === entry.seq && // …and the break reason must still be the one the exception was minted for.
+    entry.reason === brk.reason && // Defence-in-depth: a manifest may only ever carry tamper-reason
+    // exceptions (the Zod enum already excludes CHAIN_FORK). If a fork reason
+    // somehow got pinned, refuse to honour it.
+    TAMPER_REASON_SET.has(entry.reason);
+    if (isDocumented) {
+      documentedExceptions.push(brk);
+    } else {
+      tamperSignatures.push(brk);
+    }
+  }
+  return {
+    verified: tamperSignatures.length === 0 && chainForks.length === 0,
+    documentedExceptions,
+    tamperSignatures,
+    chainForks
+  };
+}
+var import_node_crypto6, import_node_fs3, import_zod15, TAMPER_REASONS, TAMPER_REASON_SET, ExceptionManifestEntrySchema, ExceptionManifestSchema, ExceptionManifestError;
+var init_exception_manifest = __esm({
+  "../qmd-team-intent-kb/packages/store/dist/exception-manifest.js"() {
+    "use strict";
+    import_node_crypto6 = require("node:crypto");
+    import_node_fs3 = require("node:fs");
+    import_zod15 = __toESM(require_zod(), 1);
+    TAMPER_REASONS = [
+      "ENTRY_HASH_MISMATCH",
+      "PREV_LINK_MISMATCH",
+      "PREV_LINK_AND_ENTRY_HASH_MISMATCH"
+    ];
+    TAMPER_REASON_SET = new Set(TAMPER_REASONS);
+    ExceptionManifestEntrySchema = import_zod15.z.object({
+      /** Audit row primary key. Names the exception uniquely. */
+      id: import_zod15.z.string(),
+      /** The row's CURRENT stored `entry_hash` at manifest-generation time (nullable). */
+      entryHash: import_zod15.z.string().nullable(),
+      /** The row's CURRENT stored `prev_entry_hash` (null for the first chained row). */
+      prevEntryHash: import_zod15.z.string().nullable(),
+      /** The row's stored `hash_version` (1 = pre-migration v1 form, 2 = v2). */
+      hashVersion: import_zod15.z.number(),
+      /** The row's monotonic write-order key. Part of the pinned identity. */
+      seq: import_zod15.z.number(),
+      /**
+       * The tamper reason this exception covers. The classifier requires the live
+       * break's reason to still match this — a documented ENTRY_HASH_MISMATCH that
+       * later reads as PREV_LINK_MISMATCH is drift, not the same exception.
+       * CHAIN_FORK is intentionally NOT a permitted value.
+       */
+      reason: import_zod15.z.enum(TAMPER_REASONS)
+    });
+    ExceptionManifestSchema = import_zod15.z.object({
+      schemaVersion: import_zod15.z.literal(1),
+      /** Optional brain identifier (a manifest is brain-specific data); null when absent. */
+      brainId: import_zod15.z.string().nullable().optional(),
+      /** ISO-8601 timestamp the manifest was generated. */
+      generatedAt: import_zod15.z.string(),
+      /** Frozen count of entries. `readManifest` HARD-asserts entries.length === this (R2). */
+      entryCount: import_zod15.z.number(),
+      /** The pinned exceptions. */
+      entries: import_zod15.z.array(ExceptionManifestEntrySchema),
+      /** SHA-256 hex over the canonical body (everything above, entries sorted). */
+      manifestHash: import_zod15.z.string()
+    });
+    ExceptionManifestError = class extends Error {
+      constructor(message) {
+        super(message);
+        this.name = "ExceptionManifestError";
+      }
+    };
+  }
+});
+
 // ../qmd-team-intent-kb/packages/store/dist/signed-merge-anchor.js
 var init_signed_merge_anchor = __esm({
   "../qmd-team-intent-kb/packages/store/dist/signed-merge-anchor.js"() {
@@ -38041,15 +38194,15 @@ function rowToState(row) {
     updatedAt: flat.updated_at
   };
 }
-var import_zod15, ExportStateRowSchema, ExportStateRepository;
+var import_zod16, ExportStateRowSchema, ExportStateRepository;
 var init_export_state_repository = __esm({
   "../qmd-team-intent-kb/packages/store/dist/repositories/export-state-repository.js"() {
     "use strict";
-    import_zod15 = __toESM(require_zod(), 1);
-    ExportStateRowSchema = import_zod15.z.object({
-      target_id: import_zod15.z.string(),
-      last_exported_at: import_zod15.z.string(),
-      updated_at: import_zod15.z.string()
+    import_zod16 = __toESM(require_zod(), 1);
+    ExportStateRowSchema = import_zod16.z.object({
+      target_id: import_zod16.z.string(),
+      last_exported_at: import_zod16.z.string(),
+      updated_at: import_zod16.z.string()
     });
     ExportStateRepository = class {
       stmtGet;
@@ -38113,6 +38266,7 @@ var init_dist3 = __esm({
     init_audit_verify();
     init_audit_chain();
     init_audit_anchor();
+    init_exception_manifest();
     init_signed_merge_anchor();
     init_audit_verify_merge();
     init_export_state_repository();
@@ -38563,11 +38717,11 @@ var init_health_check = __esm({
 });
 
 // ../qmd-team-intent-kb/packages/qmd-adapter/dist/adapter.js
-var import_node_fs3, import_node_path5, QmdAdapter;
+var import_node_fs4, import_node_path5, QmdAdapter;
 var init_adapter = __esm({
   "../qmd-team-intent-kb/packages/qmd-adapter/dist/adapter.js"() {
     "use strict";
-    import_node_fs3 = require("node:fs");
+    import_node_fs4 = require("node:fs");
     import_node_path5 = require("node:path");
     init_real_executor();
     init_collection_manager();
@@ -38638,7 +38792,7 @@ var init_adapter = __esm({
        */
       async ensureCollections() {
         for (const def of getExportableCollections()) {
-          (0, import_node_fs3.mkdirSync)((0, import_node_path5.join)(this.exportDir, def.sourceSubdir), { recursive: true });
+          (0, import_node_fs4.mkdirSync)((0, import_node_path5.join)(this.exportDir, def.sourceSubdir), { recursive: true });
         }
         return this.collections.ensureCollections(this.exportDir);
       }
@@ -38975,35 +39129,35 @@ var init_candidate_builder = __esm({
 });
 
 // ../qmd-team-intent-kb/packages/repo-resolver/dist/types.js
-var import_zod16, RepoContext, ResolverError;
+var import_zod17, RepoContext, ResolverError;
 var init_types2 = __esm({
   "../qmd-team-intent-kb/packages/repo-resolver/dist/types.js"() {
     "use strict";
-    import_zod16 = __toESM(require_zod(), 1);
-    RepoContext = import_zod16.z.object({
+    import_zod17 = __toESM(require_zod(), 1);
+    RepoContext = import_zod17.z.object({
       /** Absolute path to the repo working tree root. */
-      repoRoot: import_zod16.z.string().min(1),
+      repoRoot: import_zod17.z.string().min(1),
       /** Lowercased basename of `repoRoot`. */
-      repoName: import_zod16.z.string().min(1),
+      repoName: import_zod17.z.string().min(1),
       /** Origin remote URL, or null when no origin is configured. */
-      remoteUrl: import_zod16.z.string().nullable(),
+      remoteUrl: import_zod17.z.string().nullable(),
       /** Current branch, or null when HEAD is detached. */
-      branch: import_zod16.z.string().nullable(),
+      branch: import_zod17.z.string().nullable(),
       /** HEAD commit SHA (40-char hex). */
-      commitSha: import_zod16.z.string().regex(/^[0-9a-f]{40}$/),
+      commitSha: import_zod17.z.string().regex(/^[0-9a-f]{40}$/),
       /** True when a workspace manifest was detected. */
-      isMonorepo: import_zod16.z.boolean(),
+      isMonorepo: import_zod17.z.boolean(),
       /** Monorepo root (may equal `repoRoot`), or null when not a monorepo. */
-      workspaceRoot: import_zod16.z.string().nullable(),
+      workspaceRoot: import_zod17.z.string().nullable(),
       /** Workspace package `name` containing `cwd`, or null. */
-      workspacePackage: import_zod16.z.string().nullable()
+      workspacePackage: import_zod17.z.string().nullable()
     });
-    ResolverError = import_zod16.z.discriminatedUnion("kind", [
-      import_zod16.z.object({ kind: import_zod16.z.literal("NotAGitRepo"), cwd: import_zod16.z.string() }),
-      import_zod16.z.object({ kind: import_zod16.z.literal("BareRepo"), repoRoot: import_zod16.z.string() }),
-      import_zod16.z.object({ kind: import_zod16.z.literal("NoCommits"), repoRoot: import_zod16.z.string() }),
-      import_zod16.z.object({ kind: import_zod16.z.literal("GitUnavailable"), cause: import_zod16.z.string() }),
-      import_zod16.z.object({ kind: import_zod16.z.literal("Io"), path: import_zod16.z.string(), cause: import_zod16.z.string() })
+    ResolverError = import_zod17.z.discriminatedUnion("kind", [
+      import_zod17.z.object({ kind: import_zod17.z.literal("NotAGitRepo"), cwd: import_zod17.z.string() }),
+      import_zod17.z.object({ kind: import_zod17.z.literal("BareRepo"), repoRoot: import_zod17.z.string() }),
+      import_zod17.z.object({ kind: import_zod17.z.literal("NoCommits"), repoRoot: import_zod17.z.string() }),
+      import_zod17.z.object({ kind: import_zod17.z.literal("GitUnavailable"), cause: import_zod17.z.string() }),
+      import_zod17.z.object({ kind: import_zod17.z.literal("Io"), path: import_zod17.z.string(), cause: import_zod17.z.string() })
     ]);
   }
 });
@@ -39182,10 +39336,10 @@ var init_spool_writer = __esm({
 
 // ../qmd-team-intent-kb/packages/claude-runtime/dist/spool/spool-reader.js
 async function verifySpoolManifest(spoolFilePath) {
-  const manifestPath = `${spoolFilePath}.manifest.json`;
+  const manifestPath2 = `${spoolFilePath}.manifest.json`;
   let manifestRaw;
   try {
-    manifestRaw = await (0, import_promises2.readFile)(manifestPath, "utf8");
+    manifestRaw = await (0, import_promises2.readFile)(manifestPath2, "utf8");
   } catch {
     return { ok: true, value: { status: "no_manifest" } };
   }
@@ -39195,13 +39349,13 @@ async function verifySpoolManifest(spoolFilePath) {
     if (typeof manifest.spoolFileSha256 !== "string" || manifest.spoolFileSha256.length === 0) {
       return {
         ok: false,
-        error: `Manifest ${manifestPath} missing or invalid spoolFileSha256 field`
+        error: `Manifest ${manifestPath2} missing or invalid spoolFileSha256 field`
       };
     }
     expected = manifest.spoolFileSha256;
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
-    return { ok: false, error: `Manifest ${manifestPath} is not valid JSON: ${msg}` };
+    return { ok: false, error: `Manifest ${manifestPath2} is not valid JSON: ${msg}` };
   }
   let content;
   try {
@@ -39210,7 +39364,7 @@ async function verifySpoolManifest(spoolFilePath) {
     const msg = e instanceof Error ? e.message : String(e);
     return { ok: false, error: `Failed to read spool file for verification: ${msg}` };
   }
-  const actual = (0, import_node_crypto6.createHash)("sha256").update(content, "utf8").digest("hex");
+  const actual = (0, import_node_crypto7.createHash)("sha256").update(content, "utf8").digest("hex");
   return {
     ok: true,
     value: { status: actual === expected ? "verified" : "tampered", expected, actual }
@@ -39244,11 +39398,11 @@ async function listSpoolFiles(spoolDir) {
     return { ok: false, error: `Failed to list spool files: ${msg}` };
   }
 }
-var import_node_crypto6, import_promises2, import_node_path7;
+var import_node_crypto7, import_promises2, import_node_path7;
 var init_spool_reader = __esm({
   "../qmd-team-intent-kb/packages/claude-runtime/dist/spool/spool-reader.js"() {
     "use strict";
-    import_node_crypto6 = require("node:crypto");
+    import_node_crypto7 = require("node:crypto");
     import_promises2 = require("node:fs/promises");
     import_node_path7 = require("node:path");
     init_dist();
@@ -40055,7 +40209,7 @@ function reject(candidate, pipelineResult, auditRepo, dryRun = false) {
   const reason = pipelineResult.rejectedBy !== void 0 ? `Rejected by rule: ${pipelineResult.rejectedBy}` : `Flagged by rules: ${pipelineResult.flaggedBy?.join(", ") ?? "unknown"}`;
   if (!dryRun) {
     auditRepo.insert(AuditEvent.parse({
-      id: (0, import_node_crypto7.randomUUID)(),
+      id: (0, import_node_crypto8.randomUUID)(),
       action: "deleted",
       memoryId: candidate.id,
       tenantId: candidate.tenantId,
@@ -40071,11 +40225,11 @@ function reject(candidate, pipelineResult, auditRepo, dryRun = false) {
   }
   return reason;
 }
-var import_node_crypto7;
+var import_node_crypto8;
 var init_rejector = __esm({
   "../qmd-team-intent-kb/apps/curator/dist/rejection/rejector.js"() {
     "use strict";
-    import_node_crypto7 = require("node:crypto");
+    import_node_crypto8 = require("node:crypto");
     init_dist();
   }
 });
@@ -40547,35 +40701,35 @@ function assertPathSafe(filePath, allowedRoot) {
 }
 function writeFile2(filePath, content, exportRoot) {
   assertPathSafe(filePath, exportRoot);
-  (0, import_node_fs4.mkdirSync)((0, import_node_path11.dirname)(filePath), { recursive: true });
-  (0, import_node_fs4.writeFileSync)(filePath, content, "utf8");
+  (0, import_node_fs5.mkdirSync)((0, import_node_path11.dirname)(filePath), { recursive: true });
+  (0, import_node_fs5.writeFileSync)(filePath, content, "utf8");
 }
 function archiveFile(fromPath, toPath, content, exportRoot) {
   assertPathSafe(toPath, exportRoot);
   if (exportRoot !== void 0) {
     assertPathSafe(fromPath, exportRoot);
   }
-  (0, import_node_fs4.mkdirSync)((0, import_node_path11.dirname)(toPath), { recursive: true });
-  if ((0, import_node_fs4.existsSync)(fromPath)) {
-    (0, import_node_fs4.unlinkSync)(fromPath);
+  (0, import_node_fs5.mkdirSync)((0, import_node_path11.dirname)(toPath), { recursive: true });
+  if ((0, import_node_fs5.existsSync)(fromPath)) {
+    (0, import_node_fs5.unlinkSync)(fromPath);
   }
-  (0, import_node_fs4.writeFileSync)(toPath, content, "utf8");
+  (0, import_node_fs5.writeFileSync)(toPath, content, "utf8");
 }
 function removeFile(filePath, exportRoot) {
   if (exportRoot !== void 0) {
     assertPathSafe(filePath, exportRoot);
   }
-  if ((0, import_node_fs4.existsSync)(filePath)) {
-    (0, import_node_fs4.unlinkSync)(filePath);
+  if ((0, import_node_fs5.existsSync)(filePath)) {
+    (0, import_node_fs5.unlinkSync)(filePath);
     return true;
   }
   return false;
 }
-var import_node_fs4, import_node_path11;
+var import_node_fs5, import_node_path11;
 var init_file_writer = __esm({
   "../qmd-team-intent-kb/apps/git-exporter/dist/writer/file-writer.js"() {
     "use strict";
-    import_node_fs4 = require("node:fs");
+    import_node_fs5 = require("node:fs");
     import_node_path11 = require("node:path");
   }
 });
@@ -40598,8 +40752,8 @@ function runExport(memoryRepo, exportStateRepo, config2, nowFn = () => (/* @__PU
       continue;
     }
     const content = formatMemoryAsMarkdown(item.memory);
-    if ((0, import_node_fs5.existsSync)(item.filePath)) {
-      const existing = (0, import_node_fs5.readFileSync)(item.filePath, "utf8");
+    if ((0, import_node_fs6.existsSync)(item.filePath)) {
+      const existing = (0, import_node_fs6.readFileSync)(item.filePath, "utf8");
       if (existing === content) {
         unchanged++;
         continue;
@@ -40632,7 +40786,7 @@ function runExport(memoryRepo, exportStateRepo, config2, nowFn = () => (/* @__PU
     totalProcessed: changeset.toWrite.length + changeset.toArchive.length + changeset.toRemove.length
   };
 }
-var import_node_fs5, CONFIDENTIAL_INDEX;
+var import_node_fs6, CONFIDENTIAL_INDEX;
 var init_exporter = __esm({
   "../qmd-team-intent-kb/apps/git-exporter/dist/exporter.js"() {
     "use strict";
@@ -40640,7 +40794,7 @@ var init_exporter = __esm({
     init_change_detector();
     init_markdown_formatter();
     init_file_writer();
-    import_node_fs5 = require("node:fs");
+    import_node_fs6 = require("node:fs");
     CONFIDENTIAL_INDEX = Sensitivity.options.indexOf("confidential");
   }
 });
@@ -40674,7 +40828,7 @@ function seedDefaultPolicy(policyRepo, tenantId) {
   if (Array.isArray(existing) && existing.length > 0) return false;
   const now = (/* @__PURE__ */ new Date()).toISOString();
   const policy = GovernancePolicy.parse({
-    id: (0, import_node_crypto8.randomUUID)(),
+    id: (0, import_node_crypto9.randomUUID)(),
     name: "local-default",
     tenantId,
     enabled: true,
@@ -40707,11 +40861,11 @@ function seedDefaultPolicy(policyRepo, tenantId) {
   policyRepo.insert(policy);
   return true;
 }
-var import_node_crypto8;
+var import_node_crypto9;
 var init_seed_policy = __esm({
   "src/seed-policy.ts"() {
     "use strict";
-    import_node_crypto8 = require("node:crypto");
+    import_node_crypto9 = require("node:crypto");
     init_dist();
   }
 });
@@ -40727,7 +40881,7 @@ function commitAnchor(auditDir) {
   };
   const git = (args) => (0, import_node_child_process3.execFileSync)("git", args, { cwd: auditDir, stdio: "ignore", env });
   try {
-    if (!(0, import_node_fs6.existsSync)((0, import_node_path12.join)(auditDir, ".git"))) git(["init", "-q"]);
+    if (!(0, import_node_fs7.existsSync)((0, import_node_path12.join)(auditDir, ".git"))) git(["init", "-q"]);
     git(["add", "anchors.jsonl"]);
     git(["commit", "-q", "-m", `anchor ${(/* @__PURE__ */ new Date()).toISOString()}`]);
     try {
@@ -40744,7 +40898,7 @@ function commitAnchor(auditDir) {
 function anchorChainHead(auditRepo, basePath, tenantId) {
   try {
     const auditDir = (0, import_node_path12.join)(basePath, "audit");
-    (0, import_node_fs6.mkdirSync)(auditDir, { recursive: true });
+    (0, import_node_fs7.mkdirSync)(auditDir, { recursive: true });
     const rec = appendAnchor(auditRepo, (0, import_node_path12.join)(auditDir, "anchors.jsonl"), { tenantId });
     return {
       chainHead: rec.chainHead,
@@ -40755,13 +40909,13 @@ function anchorChainHead(auditRepo, basePath, tenantId) {
     return void 0;
   }
 }
-var import_node_child_process3, import_node_fs6, import_node_path12;
+var import_node_child_process3, import_node_fs7, import_node_path12;
 var init_anchor = __esm({
   "src/anchor.ts"() {
     "use strict";
     init_dist3();
     import_node_child_process3 = require("node:child_process");
-    import_node_fs6 = require("node:fs");
+    import_node_fs7 = require("node:fs");
     import_node_path12 = require("node:path");
   }
 });
@@ -40869,6 +41023,45 @@ function isMissingNativeDep(e) {
     msg
   );
 }
+function manifestPath(basePath) {
+  return (0, import_node_path13.join)(basePath, "audit", "exceptions.manifest.json");
+}
+function loadExceptionManifest(basePath) {
+  const p = manifestPath(basePath);
+  if (!(0, import_node_fs8.existsSync)(p)) return null;
+  try {
+    return readManifest(p);
+  } catch (e) {
+    process.stderr.write(
+      `[audit-verify] exception manifest ignored (treated as absent): ${e instanceof Error ? e.message : String(e)}
+`
+    );
+    return null;
+  }
+}
+function buildRowsById(auditRepo) {
+  const rowsById = /* @__PURE__ */ new Map();
+  for (const row of auditRepo.findAllChronological()) {
+    const raw = row;
+    rowsById.set(row.id, {
+      entry_hash: row.entry_hash,
+      prev_entry_hash: row.prev_entry_hash,
+      hash_version: row.hash_version ?? 1,
+      seq: raw.seq ?? 0
+    });
+  }
+  return rowsById;
+}
+function honestCleanMessage(totalEvents, forkCount, exceptionCount, anchorCount) {
+  const parts = ["0 tamper signatures"];
+  if (forkCount > 0) {
+    parts.push(`${forkCount} benign chain-ordering fork(s) (known artifact)`);
+  }
+  if (exceptionCount > 0) {
+    parts.push(`${exceptionCount} documented exception(s)`);
+  }
+  return `Audit chain verified over ${totalEvents} event(s): ${parts.join(", ")}, consistent with ${anchorCount} external anchor(s).`;
+}
 async function startLocalServer() {
   const transport = new StdioServerTransport();
   const shutdown = async (sig) => {
@@ -40885,14 +41078,15 @@ async function startLocalServer() {
 `
   );
 }
-var import_node_crypto9, import_zod17, import_node_path13, VERSION2, config, CATEGORIES2, NATIVE_DEP_HINT, server2;
+var import_node_crypto10, import_node_fs8, import_zod18, import_node_path13, VERSION2, config, CATEGORIES2, NATIVE_DEP_HINT, server2;
 var init_local_server = __esm({
   "src/local-server.ts"() {
     "use strict";
-    import_node_crypto9 = require("node:crypto");
+    import_node_crypto10 = require("node:crypto");
+    import_node_fs8 = require("node:fs");
     init_mcp();
     init_stdio2();
-    import_zod17 = __toESM(require_zod(), 1);
+    import_zod18 = __toESM(require_zod(), 1);
     import_node_path13 = require("node:path");
     init_dist3();
     init_dist4();
@@ -40918,9 +41112,9 @@ var init_local_server = __esm({
       "brain_search",
       "Search your governed knowledge brain and return qmd:// citations \u2014 receipts, not recall. Runs in-process against your local qmd index (no network, no API key). Curated scope by default.",
       {
-        query: import_zod17.z.string().min(1).describe("Natural-language search query"),
-        scope: import_zod17.z.enum(["curated", "all", "inbox", "archived"]).optional().describe("Search scope: curated (default, governed knowledge), all, inbox, or archived"),
-        limit: import_zod17.z.number().int().min(1).max(50).optional().describe("Maximum number of cited hits to return (default 10)")
+        query: import_zod18.z.string().min(1).describe("Natural-language search query"),
+        scope: import_zod18.z.enum(["curated", "all", "inbox", "archived"]).optional().describe("Search scope: curated (default, governed knowledge), all, inbox, or archived"),
+        limit: import_zod18.z.number().int().min(1).max(50).optional().describe("Maximum number of cited hits to return (default 10)")
       },
       async (params) => {
         const scope = params.scope ?? "curated";
@@ -40976,8 +41170,14 @@ var init_local_server = __esm({
     );
     server2.tool(
       "brain_audit_verify",
-      "Verify the integrity of your brain's audit trail \u2014 the SHA-256 hash chain AND the external anchor log. Reports any tamper: a broken hash link, or a silent rewrite of history the chain alone would miss (caught by cross-checking the anchored snapshots). Read-only.",
-      async () => {
+      "Verify the integrity of your brain's audit trail \u2014 the SHA-256 hash chain AND the external anchor log. Reports an honest 3-state summary: tamper signatures (a broken hash link, or a silent rewrite of history caught by cross-checking the anchored snapshots), documented migration exceptions, and benign chain-ordering forks. Read-only.",
+      {
+        verbose: import_zod18.z.boolean().optional().describe(
+          "Include the raw per-break detail arrays (row ids, tenants). Default false \u2014 the summary reports counts only, to avoid leaking row identity on a read surface an outsider may hit."
+        )
+      },
+      async (params) => {
+        const verbose = params.verbose ?? false;
         let db;
         try {
           db = createDatabase({ path: config.dbPath, readonly: true });
@@ -40988,14 +41188,35 @@ var init_local_server = __esm({
         try {
           const auditRepo = new AuditRepository(db);
           const result = verifyAnchors(auditRepo, (0, import_node_path13.join)(config.basePath, "audit", "anchors.jsonl"));
-          return jsonResult2({
-            ok: result.ok,
+          const manifest = loadExceptionManifest(config.basePath);
+          const rowsById = buildRowsById(auditRepo);
+          const classified = classifyChainBreaks(result.chain.breaks, manifest, rowsById);
+          const tamperCount = classified.tamperSignatures.length;
+          const exceptionCount = classified.documentedExceptions.length;
+          const forkCount = classified.chainForks.length;
+          const anchorBreakCount = result.anchorBreaks.length;
+          const ok2 = tamperCount === 0 && anchorBreakCount === 0;
+          const message = ok2 ? honestCleanMessage(result.chain.totalRows, forkCount, exceptionCount, result.anchorCount) : `\u26A0 TAMPER DETECTED \u2014 ${tamperCount} tamper signature(s), ${anchorBreakCount} anchor break(s).`;
+          const base = {
+            ok: ok2,
             totalEvents: result.chain.totalRows,
             cleanRows: result.chain.cleanRows,
-            chainBreaks: result.chain.breaks,
+            tamperSignatures: tamperCount,
+            documentedExceptions: exceptionCount,
+            chainForks: forkCount,
             anchorCount: result.anchorCount,
-            anchorBreaks: result.anchorBreaks,
-            message: result.ok ? `Audit chain intact (${result.chain.totalRows} events), consistent with ${result.anchorCount} external anchor(s).` : `\u26A0 TAMPER DETECTED \u2014 ${result.chain.breaks.length} chain break(s), ${result.anchorBreaks.length} anchor break(s).`
+            anchorBreaks: anchorBreakCount,
+            message
+          };
+          if (!verbose) return jsonResult2(base);
+          return jsonResult2({
+            ...base,
+            detail: {
+              tamperSignatures: classified.tamperSignatures,
+              documentedExceptions: classified.documentedExceptions,
+              chainForks: classified.chainForks,
+              anchorBreaks: result.anchorBreaks
+            }
           });
         } finally {
           db.close();
@@ -41006,14 +41227,14 @@ var init_local_server = __esm({
       "brain_capture",
       "Capture a single fact, decision, pattern, or convention as a governance candidate (the model's PROPOSAL). It is appended to the local spool; run brain_govern to put it through deterministic dedupe/policy/promotion with a hash-chained receipt.",
       {
-        title: import_zod17.z.string().min(1).describe("Short, specific title for the memory"),
-        content: import_zod17.z.string().min(1).describe("The fact to remember, in full"),
-        category: import_zod17.z.enum(CATEGORIES2).optional().describe("Memory category (default: reference)"),
-        filePaths: import_zod17.z.array(import_zod17.z.string()).optional().describe("Related file paths, if any")
+        title: import_zod18.z.string().min(1).describe("Short, specific title for the memory"),
+        content: import_zod18.z.string().min(1).describe("The fact to remember, in full"),
+        category: import_zod18.z.enum(CATEGORIES2).optional().describe("Memory category (default: reference)"),
+        filePaths: import_zod18.z.array(import_zod18.z.string()).optional().describe("Related file paths, if any")
       },
       async (params) => {
         const candidate = {
-          id: (0, import_node_crypto9.randomUUID)(),
+          id: (0, import_node_crypto10.randomUUID)(),
           status: "inbox",
           source: "mcp",
           content: params.content,
@@ -41065,11 +41286,11 @@ var init_local_server = __esm({
       "brain_transition",
       "Change the lifecycle state of an existing governed memory (e.g. retire an outdated one). Writes a hash-chained audit event. Valid moves: active\u2192{deprecated,superseded,archived}, deprecated\u2192{active,archived}, superseded\u2192archived.",
       {
-        memoryId: import_zod17.z.string().uuid().describe("UUID of the memory to transition"),
-        to: import_zod17.z.enum(["active", "deprecated", "superseded", "archived"]).describe("Target lifecycle state"),
-        reason: import_zod17.z.string().min(1).describe("Human-readable justification (lands in the audit trail)"),
-        actor: import_zod17.z.string().optional().describe("Who is making the change (default: owner)"),
-        supersededBy: import_zod17.z.string().uuid().optional().describe('Required UUID when transitioning to "superseded"')
+        memoryId: import_zod18.z.string().uuid().describe("UUID of the memory to transition"),
+        to: import_zod18.z.enum(["active", "deprecated", "superseded", "archived"]).describe("Target lifecycle state"),
+        reason: import_zod18.z.string().min(1).describe("Human-readable justification (lands in the audit trail)"),
+        actor: import_zod18.z.string().optional().describe("Who is making the change (default: owner)"),
+        supersededBy: import_zod18.z.string().uuid().optional().describe('Required UUID when transitioning to "superseded"')
       },
       async (params) => {
         let db;
@@ -41100,7 +41321,7 @@ var init_local_server = __esm({
           db.transaction(() => {
             memoryRepo.updateLifecycle(params.memoryId, params.to, now);
             auditRepo.insert({
-              id: (0, import_node_crypto9.randomUUID)(),
+              id: (0, import_node_crypto10.randomUUID)(),
               action,
               memoryId: params.memoryId,
               tenantId: memory.tenantId,

@@ -78,10 +78,21 @@ try {
   );
 
   // 3. audit-verify — the receipts: hash chain AND external anchor must agree.
+  // The honest 3-state summary reports discriminated counts (tamper signatures /
+  // documented exceptions / benign forks), never a raw "TAMPER" klaxon, and no
+  // raw breaks[] arrays by default (R8). A freshly-governed chain is clean.
   const ver = parse(await client.callTool({ name: 'brain_audit_verify', arguments: {} }));
   ok(
     ver.ok === true && ver.totalEvents >= 1,
-    `brain_audit_verify ok (${ver.totalEvents} event(s), ${ver.anchorCount} anchor(s), ${ver.chainBreaks?.length ?? 0} chain break(s))`,
+    `brain_audit_verify ok (${ver.totalEvents} event(s), ${ver.anchorCount} anchor(s), ${ver.tamperSignatures} tamper, ${ver.chainForks} fork(s))`,
+  );
+  ok(
+    typeof ver.message === 'string' && !/TAMPER/.test(ver.message),
+    `audit-verify message is newcomer-safe (no false TAMPER): "${ver.message}"`,
+  );
+  ok(
+    ver.chainBreaks === undefined && ver.detail === undefined,
+    'audit-verify default response omits raw breaks[]/detail (counts-only; R8)',
   );
 
   // 4. status — the governed memory is durably stored.
