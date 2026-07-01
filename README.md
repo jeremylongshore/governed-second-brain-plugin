@@ -61,6 +61,43 @@ a writer with access can edit an event *and* re-hash the chain forward. Within a
 (your machine) that's exactly the integrity guarantee you want; cross-actor non-repudiation needs an
 external chain-head anchor (on the roadmap). It is **not** a blockchain and **not** immutable storage.
 
+## Independently verify the anchor log
+
+`brain_audit_verify` is the *in-box* check — it runs inside the same codebase that wrote the chain
+(circular trust). For "don't trust us, run it yourself," there's a **standalone, zero-dependency
+verifier** that re-derives every anchor hash itself, importing **nothing** from this plugin or the
+engines. It's the `cat log.md` of receipts — one file, node built-ins only (`crypto`, `fs`,
+`child_process`), no build step:
+
+```bash
+# defaults to $HOME/.teamkb/audit/anchors.jsonl
+node scripts/verify-anchors.mjs
+
+# be explicit, and cross-check the live DB head against the latest anchor
+node scripts/verify-anchors.mjs \
+  --anchors "$HOME/.teamkb/audit/anchors.jsonl" \
+  --audit-dir "$HOME/.teamkb/audit" \
+  --db "$HOME/.teamkb/teamkb.db"
+
+npm run verify-anchors        # same, via the package script
+node scripts/verify-anchors.mjs --json   # machine-readable output
+```
+
+It checks four things against the external anchor log (`anchors.jsonl`, an append-only hash chain):
+
+1. **Per-record integrity** — recomputes each `anchorHash` from the canonical body; any edit is an
+   `ANCHOR_HASH_MISMATCH`.
+2. **Chain linkage** — `record[0].prevAnchorHash` is `null`, each subsequent `prevAnchorHash` equals
+   the prior record's `anchorHash`, and `chainedRows` never regresses.
+3. **External witness (git)** — confirms the anchor log is committed and clean (an uncommitted or
+   un-pushed log is only *locally* witnessed — surfaced as a warning, not a hard fail).
+4. **Optional DB cross-check** (`--db`, needs `sqlite3` on PATH) — the latest anchor's `chainHead`
+   must equal the live audit chain's current head and its `chainedRows` must not exceed the current
+   count, catching a silent rewrite of history the in-box chain-walk alone would miss.
+
+Exit `0` on pass (witness-only warnings still exit `0`); non-zero on any integrity, linkage, or
+history-rewrite failure. Run the verifier's own tests with `npm run verify-anchors:test`.
+
 ## Install
 
 One command, two modes:
