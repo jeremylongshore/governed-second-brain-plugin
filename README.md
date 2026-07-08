@@ -124,7 +124,7 @@ The **same** plugin runs in **team mode** when `TEAMKB_API_URL` is set: instead 
 brain, it proxies to a shared governed-brain HTTP API (INTKB's `apps/api`) over your network — so a
 whole team queries and contributes to **one** governed brain. Set two environment variables:
 
-- **`TEAMKB_API_URL`** — your team brain's API base (e.g. `http://<host>:3847`)
+- **`TEAMKB_API_URL`** — your team brain's API base (e.g. `http://localhost:3847`)
 - **`TEAMKB_API_TOKEN`** — your personal bearer token (issued by the brain's operator)
 
 You need network reachability to that API — typically a private network / VPN such as **Tailscale**
