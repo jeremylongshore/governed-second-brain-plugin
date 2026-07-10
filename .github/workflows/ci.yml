@@ -1,0 +1,71 @@
+name: CI
+
+# Lint + typecheck + unit tests for the plugin source, on every PR.
+#
+# The build-only devDeps are `link:../qmd-team-intent-kb/*` — the PRIVATE sibling
+# monorepo that does NOT exist in a fresh CI checkout (the same reason smoke.yml
+# never builds). So this workflow gates the surface reachable WITHOUT that monorepo:
+# eslint (parse-only, all src), a scoped typecheck of the two CI-safe modules, and
+# the vitest unit suite. Full `build` + full `typecheck` + the whole-chain smoke run
+# locally and in smoke.yml (which drives the committed bundle). See tests/TESTING.md.
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: 'ci-${{ github.ref }}'
+  cancel-in-progress: true
+
+jobs:
+  quality:
+    name: Lint · typecheck · unit tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      # Strip ONLY the private-sibling workspace links, then install the rest
+      # (vitest, eslint, typescript, the MCP SDK, better-sqlite3, …). The tested
+      # modules (src/mode.ts, src/remote-server.ts), the lint scope, and the
+      # typecheck:ci scope all deliberately avoid every @qmd-team-intent-kb import,
+      # so this partial install is sufficient. npm (not pnpm --frozen-lockfile)
+      # because package.json is mutated first — mirrors smoke.yml's proven pattern.
+      - name: Drop the private-sibling workspace links
+        run: |
+          node -e "const p=require('./package.json'); for (const k of Object.keys(p.devDependencies||{})) if (k.startsWith('@qmd-team-intent-kb/')) delete p.devDependencies[k]; require('fs').writeFileSync('package.json', JSON.stringify(p,null,2))"
+
+      - name: Install (no frozen lockfile — package.json was just trimmed)
+        run: npm install --no-audit --no-fund
+
+      - name: Lint (eslint)
+        run: npm run lint
+
+      - name: Typecheck (CI-safe modules)
+        run: npm run typecheck:ci
+
+      - name: Unit tests + coverage floor (vitest)
+        run: npm run test:coverage
+
+      - name: Anchor-verifier unit tests (zero-dep node:test)
+        run: node --test scripts/verify-anchors.test.mjs
+
+      - name: Audit-harness verify (hash-pinned gate configs)
+        # Exit 3 (no manifest) is tolerated so a future manifest reset doesn't hard-fail;
+        # exit 2 = HARNESS_TAMPERED (a gate config was changed without re-pinning).
+        run: |
+          npx audit-harness verify || rc=$?
+          if [ "${rc:-0}" = "3" ]; then
+            echo "::warning::No hash manifest present. Run: npx audit-harness init"
+            exit 0
+          fi
+          exit "${rc:-0}"

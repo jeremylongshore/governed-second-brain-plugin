@@ -20,14 +20,15 @@
  * work identically in either mode.
  */
 
-async function main(): Promise<void> {
-  // Team mode iff TEAMKB_API_URL is genuinely set. An empty value, or an
-  // unexpanded "${TEAMKB_API_URL}" placeholder (what the host may pass when the
-  // var is not set in the user's environment), both mean local mode.
-  const raw = process.env['TEAMKB_API_URL']?.trim();
-  const apiUrl = raw !== undefined && raw !== '' && !raw.startsWith('${') ? raw : undefined;
+import { resolveMode } from './mode.js';
 
-  if (apiUrl !== undefined) {
+async function main(): Promise<void> {
+  // Team mode iff TEAMKB_API_URL is genuinely set — an empty value or an
+  // unexpanded "${TEAMKB_API_URL}" placeholder both mean local mode. The exact
+  // predicate lives in (and is unit-tested through) src/mode.ts.
+  const { mode } = resolveMode(process.env['TEAMKB_API_URL']);
+
+  if (mode === 'team') {
     // Team mode — remote proxy over the tailnet.
     const { startRemoteServer } = await import('./remote-server.js');
     await startRemoteServer();

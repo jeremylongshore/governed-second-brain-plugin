@@ -48,7 +48,7 @@ function jsonResult(obj: unknown) {
 }
 
 /** content-type + (optional) per-user bearer — the one auth surface for every call. */
-function authHeaders(): Record<string, string> {
+export function authHeaders(): Record<string, string> {
   const headers: Record<string, string> = { 'content-type': 'application/json' };
   if (API_TOKEN !== undefined && API_TOKEN !== '') {
     headers['authorization'] = `Bearer ${API_TOKEN}`;
@@ -57,7 +57,7 @@ function authHeaders(): Record<string, string> {
 }
 
 /** Map a non-OK brain-API response to a clear, role-aware message (no silent failures). */
-async function errorResult(res: Response): Promise<ReturnType<typeof jsonResult>> {
+export async function errorResult(res: Response): Promise<ReturnType<typeof jsonResult>> {
   // Read the body stream ONCE as text, then parse — calling res.json() then
   // res.text() in a fallback throws "body stream already read" and loses non-JSON
   // error bodies (plain text / HTML error pages).
@@ -92,7 +92,7 @@ interface CitedHit {
   collection?: string;
 }
 
-async function search(
+export async function search(
   query: string,
   scope: string,
   limit: number,
