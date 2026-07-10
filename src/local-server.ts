@@ -35,6 +35,7 @@ import type { MemoryCandidate } from '@qmd-team-intent-kb/schema';
 import { resolveConfig } from './config.js';
 import { runGovern } from './govern.js';
 import { anchorChainHead } from './anchor.js';
+import { acquireWriteLock, WriteLockBusyError } from './write-lock.js';
 
 const VERSION = '1.0.0';
 const config = resolveConfig();
@@ -349,6 +350,10 @@ server.tool(
     try {
       s = await runGovern(config);
     } catch (e) {
+      // Another writer (an interactive transition, or the cron backup/compile
+      // holding /usr/bin/flock) held the write lock past the bounded wait. Return
+      // a clean, retryable result instead of hanging the MCP.
+      if (e instanceof WriteLockBusyError) return jsonResult({ ok: false, error: e.message });
       if (isMissingNativeDep(e)) return jsonResult({ ok: false, error: 'native-store-unavailable', message: NATIVE_DEP_HINT });
       throw e;
     }
@@ -379,66 +384,82 @@ server.tool(
     supersededBy: z.string().uuid().optional().describe('Required UUID when transitioning to "superseded"'),
   },
   async (params) => {
-    let db;
+    // Serialize the whole transition (DB lifecycle update + audit insert + anchor
+    // append) under the brain's exclusive flock(2) write lock — THE SAME lock the
+    // cron backup/compile take via /usr/bin/flock — so a lifecycle write can't land
+    // mid-backup and can't fork the anchor log against a concurrent govern. On
+    // contention past the bounded wait, report busy cleanly rather than hang.
+    let lock;
     try {
-      db = createDatabase({ path: config.dbPath });
+      lock = await acquireWriteLock(config.basePath);
     } catch (e) {
-      if (isMissingNativeDep(e)) return jsonResult({ ok: false, error: 'native-store-unavailable', message: NATIVE_DEP_HINT });
+      if (e instanceof WriteLockBusyError) return jsonResult({ ok: false, error: e.message });
       throw e;
     }
     try {
-      const memoryRepo = new MemoryRepository(db);
-      const auditRepo = new AuditRepository(db);
-      const memory = memoryRepo.findById(params.memoryId);
-      if (!memory) {
-        return jsonResult({ ok: false, error: `No memory found with id ${params.memoryId}` });
+      let db;
+      try {
+        db = createDatabase({ path: config.dbPath });
+      } catch (e) {
+        if (isMissingNativeDep(e)) return jsonResult({ ok: false, error: 'native-store-unavailable', message: NATIVE_DEP_HINT });
+        throw e;
       }
-      const actor = { type: 'human' as const, id: params.actor ?? 'owner' };
-      const validation = validateTransition(memory.lifecycle, params.to, {
-        reason: params.reason,
-        actor,
-        supersededBy: params.supersededBy,
-      });
-      if (!validation.valid) {
-        return jsonResult({ ok: false, error: validation.error });
-      }
-      const now = new Date().toISOString();
-      const action =
-        params.to === 'archived' ? 'archived' : params.to === 'superseded' ? 'superseded' : 'demoted';
-      db.transaction(() => {
-        memoryRepo.updateLifecycle(params.memoryId, params.to, now);
-        auditRepo.insert({
-          id: randomUUID(),
-          action,
-          memoryId: params.memoryId,
-          tenantId: memory.tenantId,
-          actor,
+      try {
+        const memoryRepo = new MemoryRepository(db);
+        const auditRepo = new AuditRepository(db);
+        const memory = memoryRepo.findById(params.memoryId);
+        if (!memory) {
+          return jsonResult({ ok: false, error: `No memory found with id ${params.memoryId}` });
+        }
+        const actor = { type: 'human' as const, id: params.actor ?? 'owner' };
+        const validation = validateTransition(memory.lifecycle, params.to, {
           reason: params.reason,
-          details: { from: memory.lifecycle, to: params.to },
-          timestamp: now,
+          actor,
+          supersededBy: params.supersededBy,
         });
-      })();
-      // Re-anchor the chain head AFTER the durable audit write commits, so this
-      // transition's row is snapshotted into the external anchor log immediately
-      // — narrowing the rewrite-detection window to one write instead of one
-      // govern cycle (010-AT-RISK R3b). Best-effort: a failed anchor must NOT
-      // fail the transition; the memory move + audit event already committed.
-      // `committed:true` may be unpushed when there's no remote — a local-only
-      // witness, not external tamper-evidence (the verifier reports that as
-      // UNPUSHED_LOCAL_WITNESS), so we don't overclaim in the message.
-      const anchored = anchorChainHead(auditRepo, config.basePath, config.tenantId);
-      return jsonResult({
-        ok: true,
-        memoryId: params.memoryId,
-        from: memory.lifecycle,
-        to: params.to,
-        anchored,
-        message: anchored
-          ? 'Transition applied; hash-chained audit event written and chain head re-anchored.'
-          : 'Transition applied; hash-chained audit event written. (External anchor skipped — best-effort; the durable write is unaffected.)',
-      });
+        if (!validation.valid) {
+          return jsonResult({ ok: false, error: validation.error });
+        }
+        const now = new Date().toISOString();
+        const action =
+          params.to === 'archived' ? 'archived' : params.to === 'superseded' ? 'superseded' : 'demoted';
+        db.transaction(() => {
+          memoryRepo.updateLifecycle(params.memoryId, params.to, now);
+          auditRepo.insert({
+            id: randomUUID(),
+            action,
+            memoryId: params.memoryId,
+            tenantId: memory.tenantId,
+            actor,
+            reason: params.reason,
+            details: { from: memory.lifecycle, to: params.to },
+            timestamp: now,
+          });
+        })();
+        // Re-anchor the chain head AFTER the durable audit write commits, so this
+        // transition's row is snapshotted into the external anchor log immediately
+        // — narrowing the rewrite-detection window to one write instead of one
+        // govern cycle (010-AT-RISK R3b). Best-effort: a failed anchor must NOT
+        // fail the transition; the memory move + audit event already committed.
+        // `committed:true` may be unpushed when there's no remote — a local-only
+        // witness, not external tamper-evidence (the verifier reports that as
+        // UNPUSHED_LOCAL_WITNESS), so we don't overclaim in the message.
+        const anchored = anchorChainHead(auditRepo, config.basePath, config.tenantId);
+        return jsonResult({
+          ok: true,
+          memoryId: params.memoryId,
+          from: memory.lifecycle,
+          to: params.to,
+          anchored,
+          message: anchored
+            ? 'Transition applied; hash-chained audit event written and chain head re-anchored.'
+            : 'Transition applied; hash-chained audit event written. (External anchor skipped — best-effort; the durable write is unaffected.)',
+        });
+      } finally {
+        db.close();
+      }
     } finally {
-      db.close();
+      lock.release();
     }
   },
 );

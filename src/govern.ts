@@ -12,6 +12,7 @@ import { QmdAdapter } from '@qmd-team-intent-kb/qmd-adapter';
 import type { BrainConfig } from './config.js';
 import { seedDefaultPolicy } from './seed-policy.js';
 import { anchorChainHead } from './anchor.js';
+import { acquireWriteLock } from './write-lock.js';
 
 /**
  * Result of one in-process govern pass — what the deterministic pipeline did
@@ -46,8 +47,27 @@ export interface GovernSummary {
  * and the audit chain all still complete; only the index refresh fails (its
  * error is surfaced in `indexError`, and the new memory becomes searchable once
  * qmd is installed and govern is re-run).
+ *
+ * Concurrency: the ENTIRE pass (DB writes → export → qmd index → anchor append)
+ * runs while holding the brain's exclusive `flock(2)` write lock on
+ * `<base>/.write.lock` — THE SAME lock the cron backup/compile wrappers take via
+ * `/usr/bin/flock`. This is what keeps an interactive govern from landing between
+ * the 04:30 backup's `VACUUM INTO` and its `tar` (a false "TAMPER DETECTED" on
+ * restore) and stops concurrent anchor appends from forking the anchor log. On
+ * contention past the bounded wait it throws `WriteLockBusyError` — the tool
+ * handler turns that into a clean, retryable result instead of hanging the MCP.
  */
 export async function runGovern(config: BrainConfig): Promise<GovernSummary> {
+  const lock = await acquireWriteLock(config.basePath);
+  try {
+    return await runGovernLocked(config);
+  } finally {
+    lock.release();
+  }
+}
+
+/** The govern pass body, run under the already-held write lock (see runGovern). */
+async function runGovernLocked(config: BrainConfig): Promise<GovernSummary> {
   const db = createDatabase({ path: config.dbPath });
   try {
     const candidateRepo = new CandidateRepository(db);

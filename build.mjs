@@ -5,8 +5,10 @@
 // both modules (CJS, no splitting) into ONE file, lazily — at runtime only the
 // selected mode's module initializes, so team mode never touches better-sqlite3.
 //
-// Everything is inlined EXCEPT the one native module (better-sqlite3, which
-// ships a compiled .node addon and cannot be bundled) and its 'bindings' loader.
+// Everything is inlined EXCEPT the native modules (better-sqlite3, which ships a
+// compiled .node addon and cannot be bundled, and fs-ext, the flock(2) wrapper the
+// local-mode write lock uses to serialize against the cron's /usr/bin/flock) plus
+// better-sqlite3's 'bindings' loader.
 // ajv/ajv-formats (pulled in transitively by the MCP SDK and used to validate
 // every tool call at runtime) MUST stay bundled — externalizing them makes the
 // runtime inert. zod is aliased to a single copy so the MCP SDK and our tool
@@ -32,7 +34,7 @@ await esbuild.build({
   format: 'cjs',
   target: 'node20',
   outfile: 'plugin-runtime/governed-brain.cjs',
-  external: ['better-sqlite3', 'bindings'],
+  external: ['better-sqlite3', 'bindings', 'fs-ext'],
   alias: { zod: zodAlias },
   logLevel: 'info',
 });

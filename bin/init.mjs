@@ -110,22 +110,35 @@ async function preflight(folder, args, fileCount) {
   return confirm('  Proceed?');
 }
 
+// The bundle externalizes two native modules — better-sqlite3 (the local store)
+// and fs-ext (the flock(2) wrapper the local-mode write lock uses to serialize
+// against the cron's /usr/bin/flock). An npx install pulls them in as deps; a
+// file-copy install (e.g. /plugin install from a marketplace) ships only the
+// bundle, so both must be vendored + native-built into plugin-runtime/.
+const NATIVE_DEPS = [
+  { name: 'better-sqlite3', fallbackVer: '^12.10.0', addonRel: join('build', 'Release', 'better_sqlite3.node') },
+  { name: 'fs-ext', fallbackVer: '^2.1.1', addonRel: join('build', 'Release', 'fs_ext.node') },
+];
+
 function ensureNativeDep() {
-  // Already resolvable from the runtime (e.g. npx-installed it as a dependency)? Done.
-  try { createRequire(RUNTIME).resolve('better-sqlite3'); return; } catch {}
-  const addon = join(RUNTIME_NM, 'better-sqlite3', 'build', 'Release', 'better_sqlite3.node');
-  if (existsSync(addon)) return;
-  // Resolve the version the bundle was built against.
-  let ver = '^12.10.0';
-  try { ver = JSON.parse(readFileSync(join(PLUGIN_ROOT, 'package.json'), 'utf8')).dependencies['better-sqlite3'] || ver; } catch {}
-  log(C.dim(`  vendoring better-sqlite3@${ver} into plugin-runtime/ (native build)…`));
-  try {
-    execFileSync('npm', ['install', `better-sqlite3@${ver}`, '--prefix', join(PLUGIN_ROOT, 'plugin-runtime'), '--no-save', '--silent'],
-      { stdio: ['ignore', 'ignore', 'inherit'] });
-  } catch {
-    die('failed to build better-sqlite3 (needs Node 20+ and a C/C++ toolchain). Install build-essential / Xcode CLT and retry.');
+  const require = createRequire(RUNTIME);
+  const deps = JSON.parse(readFileSync(join(PLUGIN_ROOT, 'package.json'), 'utf8')).dependencies || {};
+  for (const { name, fallbackVer, addonRel } of NATIVE_DEPS) {
+    // Already resolvable from the runtime (e.g. npx-installed it as a dependency)? Done.
+    try { require.resolve(name); continue; } catch {}
+    const addon = join(RUNTIME_NM, name, addonRel);
+    if (existsSync(addon)) continue;
+    // Resolve the version the bundle was built against.
+    const ver = deps[name] || fallbackVer;
+    log(C.dim(`  vendoring ${name}@${ver} into plugin-runtime/ (native build)…`));
+    try {
+      execFileSync('npm', ['install', `${name}@${ver}`, '--prefix', join(PLUGIN_ROOT, 'plugin-runtime'), '--no-save', '--silent'],
+        { stdio: ['ignore', 'ignore', 'inherit'] });
+    } catch {
+      die(`failed to build ${name} (needs Node 20+ and a C/C++ toolchain). Install build-essential / Xcode CLT and retry.`);
+    }
+    if (!existsSync(addon)) die(`${name} native addon did not build — see errors above.`);
   }
-  if (!existsSync(addon)) die('better-sqlite3 native addon did not build — see errors above.');
 }
 
 function checkQmd() {

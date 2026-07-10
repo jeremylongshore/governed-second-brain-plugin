@@ -35513,6 +35513,8 @@ var init_stdio2 = __esm({
 // src/remote-server.ts
 var remote_server_exports = {};
 __export(remote_server_exports, {
+  authHeaders: () => authHeaders,
+  errorResult: () => errorResult,
   search: () => search,
   startRemoteServer: () => startRemoteServer,
   status: () => status
@@ -35749,10 +35751,10 @@ var init_remote_server = __esm({
   }
 });
 
-// ../qmd-team-intent-kb/packages/store/dist/schema.js
+// ../../../home/jeremy/000-projects/qmd-team-intent-kb/packages/store/dist/schema.js
 var CANDIDATES_DDL, CURATED_MEMORIES_DDL, GOVERNANCE_POLICIES_DDL, AUDIT_EVENTS_DDL, EXPORT_STATE_DDL, SCHEMA_MIGRATIONS_DDL, TABLE_DDL, MIGRATIONS;
 var init_schema = __esm({
-  "../qmd-team-intent-kb/packages/store/dist/schema.js"() {
+  "../../../home/jeremy/000-projects/qmd-team-intent-kb/packages/store/dist/schema.js"() {
     "use strict";
     CANDIDATES_DDL = `
 CREATE TABLE IF NOT EXISTS candidates (
@@ -36034,7 +36036,7 @@ CREATE UNIQUE INDEX IF NOT EXISTS idx_audit_seq ON audit_events(seq);
   }
 });
 
-// ../qmd-team-intent-kb/packages/store/dist/database.js
+// ../../../home/jeremy/000-projects/qmd-team-intent-kb/packages/store/dist/database.js
 function ensureSecureDirectory(dbPath) {
   if (dbPath === ":memory:")
     return;
@@ -36084,7 +36086,7 @@ function runMigrations(db) {
 }
 var import_node_fs, import_node_path, import_better_sqlite3;
 var init_database = __esm({
-  "../qmd-team-intent-kb/packages/store/dist/database.js"() {
+  "../../../home/jeremy/000-projects/qmd-team-intent-kb/packages/store/dist/database.js"() {
     "use strict";
     import_node_fs = require("node:fs");
     import_node_path = require("node:path");
@@ -36093,10 +36095,10 @@ var init_database = __esm({
   }
 });
 
-// ../qmd-team-intent-kb/packages/schema/dist/enums.js
+// ../../../home/jeremy/000-projects/qmd-team-intent-kb/packages/schema/dist/enums.js
 var import_zod3, MemorySource, TrustLevel, MemoryCategory, MemoryLifecycleState, CandidateStatus, SearchScope, PolicyRuleType, PolicyRuleAction, AuditAction, Confidence, Sensitivity, AuthorType, LinkType, LinkSource, ImportBatchStatus;
 var init_enums = __esm({
-  "../qmd-team-intent-kb/packages/schema/dist/enums.js"() {
+  "../../../home/jeremy/000-projects/qmd-team-intent-kb/packages/schema/dist/enums.js"() {
     "use strict";
     import_zod3 = __toESM(require_zod(), 1);
     MemorySource = import_zod3.z.enum(["claude_session", "manual", "import", "mcp"]);
@@ -36151,10 +36153,10 @@ var init_enums = __esm({
   }
 });
 
-// ../qmd-team-intent-kb/packages/schema/dist/common.js
+// ../../../home/jeremy/000-projects/qmd-team-intent-kb/packages/schema/dist/common.js
 var import_zod4, Uuid, Sha256Hash, IsoDatetime, NonEmptyString, SemVer, Tag, Author, TenantId, ContentMetadata;
 var init_common = __esm({
-  "../qmd-team-intent-kb/packages/schema/dist/common.js"() {
+  "../../../home/jeremy/000-projects/qmd-team-intent-kb/packages/schema/dist/common.js"() {
     "use strict";
     import_zod4 = __toESM(require_zod(), 1);
     init_enums();
@@ -36184,10 +36186,10 @@ var init_common = __esm({
   }
 });
 
-// ../qmd-team-intent-kb/packages/schema/dist/memory-candidate.js
+// ../../../home/jeremy/000-projects/qmd-team-intent-kb/packages/schema/dist/memory-candidate.js
 var import_zod5, PrePolicyFlags, MemoryCandidate;
 var init_memory_candidate = __esm({
-  "../qmd-team-intent-kb/packages/schema/dist/memory-candidate.js"() {
+  "../../../home/jeremy/000-projects/qmd-team-intent-kb/packages/schema/dist/memory-candidate.js"() {
     "use strict";
     import_zod5 = __toESM(require_zod(), 1);
     init_enums();
@@ -36218,10 +36220,10 @@ var init_memory_candidate = __esm({
   }
 });
 
-// ../qmd-team-intent-kb/packages/schema/dist/curated-memory.js
+// ../../../home/jeremy/000-projects/qmd-team-intent-kb/packages/schema/dist/curated-memory.js
 var import_zod6, PolicyEvaluation, SupersessionLink, CuratedMemory;
 var init_curated_memory = __esm({
-  "../qmd-team-intent-kb/packages/schema/dist/curated-memory.js"() {
+  "../../../home/jeremy/000-projects/qmd-team-intent-kb/packages/schema/dist/curated-memory.js"() {
     "use strict";
     import_zod6 = __toESM(require_zod(), 1);
     init_enums();
@@ -36270,10 +36272,10 @@ var init_curated_memory = __esm({
   }
 });
 
-// ../qmd-team-intent-kb/packages/schema/dist/governance-policy.js
+// ../../../home/jeremy/000-projects/qmd-team-intent-kb/packages/schema/dist/governance-policy.js
 var import_zod7, PolicyRule, GovernancePolicy;
 var init_governance_policy = __esm({
-  "../qmd-team-intent-kb/packages/schema/dist/governance-policy.js"() {
+  "../../../home/jeremy/000-projects/qmd-team-intent-kb/packages/schema/dist/governance-policy.js"() {
     "use strict";
     import_zod7 = __toESM(require_zod(), 1);
     init_enums();
@@ -36300,10 +36302,10 @@ var init_governance_policy = __esm({
   }
 });
 
-// ../qmd-team-intent-kb/packages/schema/dist/search.js
+// ../../../home/jeremy/000-projects/qmd-team-intent-kb/packages/schema/dist/search.js
 var import_zod8, Pagination, SearchQuery, SearchHit, SearchResult;
 var init_search = __esm({
-  "../qmd-team-intent-kb/packages/schema/dist/search.js"() {
+  "../../../home/jeremy/000-projects/qmd-team-intent-kb/packages/schema/dist/search.js"() {
     "use strict";
     import_zod8 = __toESM(require_zod(), 1);
     init_enums();
@@ -36356,10 +36358,10 @@ var init_search = __esm({
   }
 });
 
-// ../qmd-team-intent-kb/packages/schema/dist/audit-event.js
+// ../../../home/jeremy/000-projects/qmd-team-intent-kb/packages/schema/dist/audit-event.js
 var import_zod9, AuditEvent;
 var init_audit_event = __esm({
-  "../qmd-team-intent-kb/packages/schema/dist/audit-event.js"() {
+  "../../../home/jeremy/000-projects/qmd-team-intent-kb/packages/schema/dist/audit-event.js"() {
     "use strict";
     import_zod9 = __toESM(require_zod(), 1);
     init_enums();
@@ -36377,7 +36379,7 @@ var init_audit_event = __esm({
   }
 });
 
-// ../qmd-team-intent-kb/packages/schema/dist/lifecycle.js
+// ../../../home/jeremy/000-projects/qmd-team-intent-kb/packages/schema/dist/lifecycle.js
 function isTransitionAllowed(from, to) {
   return ALLOWED_TRANSITIONS[from].includes(to);
 }
@@ -36398,7 +36400,7 @@ function validateTransition(from, to, request) {
 }
 var import_zod10, TransitionRequest, ALLOWED_TRANSITIONS;
 var init_lifecycle = __esm({
-  "../qmd-team-intent-kb/packages/schema/dist/lifecycle.js"() {
+  "../../../home/jeremy/000-projects/qmd-team-intent-kb/packages/schema/dist/lifecycle.js"() {
     "use strict";
     init_common();
     import_zod10 = __toESM(require_zod(), 1);
@@ -36416,9 +36418,9 @@ var init_lifecycle = __esm({
   }
 });
 
-// ../qmd-team-intent-kb/packages/schema/dist/index.js
+// ../../../home/jeremy/000-projects/qmd-team-intent-kb/packages/schema/dist/index.js
 var init_dist = __esm({
-  "../qmd-team-intent-kb/packages/schema/dist/index.js"() {
+  "../../../home/jeremy/000-projects/qmd-team-intent-kb/packages/schema/dist/index.js"() {
     "use strict";
     init_enums();
     init_common();
@@ -36431,26 +36433,26 @@ var init_dist = __esm({
   }
 });
 
-// ../qmd-team-intent-kb/packages/common/dist/result.js
+// ../../../home/jeremy/000-projects/qmd-team-intent-kb/packages/common/dist/result.js
 var init_result = __esm({
-  "../qmd-team-intent-kb/packages/common/dist/result.js"() {
+  "../../../home/jeremy/000-projects/qmd-team-intent-kb/packages/common/dist/result.js"() {
     "use strict";
   }
 });
 
-// ../qmd-team-intent-kb/packages/common/dist/hash.js
+// ../../../home/jeremy/000-projects/qmd-team-intent-kb/packages/common/dist/hash.js
 function computeContentHash(content) {
   return (0, import_node_crypto2.createHash)("sha256").update(content, "utf8").digest("hex");
 }
 var import_node_crypto2;
 var init_hash = __esm({
-  "../qmd-team-intent-kb/packages/common/dist/hash.js"() {
+  "../../../home/jeremy/000-projects/qmd-team-intent-kb/packages/common/dist/hash.js"() {
     "use strict";
     import_node_crypto2 = require("node:crypto");
   }
 });
 
-// ../qmd-team-intent-kb/packages/common/dist/uuid-v5.js
+// ../../../home/jeremy/000-projects/qmd-team-intent-kb/packages/common/dist/uuid-v5.js
 function uuidStringToBytes(uuid) {
   const hex = uuid.replace(/-/g, "");
   if (hex.length !== 32) {
@@ -36495,7 +36497,7 @@ function deriveLinkId(sourceMemoryId, targetMemoryId, linkType) {
 }
 var import_node_crypto3, SPOOL_UUID_NAMESPACE, NAME_FIELD_SEPARATOR;
 var init_uuid_v5 = __esm({
-  "../qmd-team-intent-kb/packages/common/dist/uuid-v5.js"() {
+  "../../../home/jeremy/000-projects/qmd-team-intent-kb/packages/common/dist/uuid-v5.js"() {
     "use strict";
     import_node_crypto3 = require("node:crypto");
     SPOOL_UUID_NAMESPACE = ["6c6f6e67-7368-6f72", "6500-69636f73706c"].join("-");
@@ -36503,7 +36505,7 @@ var init_uuid_v5 = __esm({
   }
 });
 
-// ../qmd-team-intent-kb/packages/common/dist/paths.js
+// ../../../home/jeremy/000-projects/qmd-team-intent-kb/packages/common/dist/paths.js
 function getTeamKbBasePath() {
   const basePath = process.env["TEAMKB_BASE_PATH"];
   if (typeof basePath === "string" && basePath.trim() !== "") {
@@ -36520,7 +36522,7 @@ function resolveTeamKbPath(subdir) {
 }
 var import_node_path2, import_node_os, DEFAULT_TEAMKB_BASE;
 var init_paths = __esm({
-  "../qmd-team-intent-kb/packages/common/dist/paths.js"() {
+  "../../../home/jeremy/000-projects/qmd-team-intent-kb/packages/common/dist/paths.js"() {
     "use strict";
     import_node_path2 = require("node:path");
     import_node_os = require("node:os");
@@ -36528,7 +36530,7 @@ var init_paths = __esm({
   }
 });
 
-// ../qmd-team-intent-kb/packages/common/dist/path-safety.js
+// ../../../home/jeremy/000-projects/qmd-team-intent-kb/packages/common/dist/path-safety.js
 function isPathSafe(path, allowedRoots) {
   if (path.includes("\0")) {
     return { safe: false, reason: "Path contains null byte" };
@@ -36554,19 +36556,19 @@ function isPathSafe(path, allowedRoots) {
   return { safe: true };
 }
 var init_path_safety = __esm({
-  "../qmd-team-intent-kb/packages/common/dist/path-safety.js"() {
+  "../../../home/jeremy/000-projects/qmd-team-intent-kb/packages/common/dist/path-safety.js"() {
     "use strict";
   }
 });
 
-// ../qmd-team-intent-kb/packages/common/dist/freshness.js
+// ../../../home/jeremy/000-projects/qmd-team-intent-kb/packages/common/dist/freshness.js
 var init_freshness = __esm({
-  "../qmd-team-intent-kb/packages/common/dist/freshness.js"() {
+  "../../../home/jeremy/000-projects/qmd-team-intent-kb/packages/common/dist/freshness.js"() {
     "use strict";
   }
 });
 
-// ../qmd-team-intent-kb/packages/common/dist/disclosure-filter.js
+// ../../../home/jeremy/000-projects/qmd-team-intent-kb/packages/common/dist/disclosure-filter.js
 function foldHomoglyphs(text) {
   let out = "";
   for (const ch of text) {
@@ -36657,7 +36659,7 @@ function assertDisclosureClean(candidate) {
 }
 var COMPENSATION_TERMS_PATTERN, RATIO_SPLIT_PATTERN, COMP_CONTEXT_PATTERN, PII_PATTERN, SECRET_PATTERNS, INVISIBLE_CHARS, HOMOGLYPH_MAP, ENUM_CONSTRAINED_FIELDS, DisclosureRejectedError;
 var init_disclosure_filter = __esm({
-  "../qmd-team-intent-kb/packages/common/dist/disclosure-filter.js"() {
+  "../../../home/jeremy/000-projects/qmd-team-intent-kb/packages/common/dist/disclosure-filter.js"() {
     "use strict";
     COMPENSATION_TERMS_PATTERN = /\bsalary\b|base pay\b|take[- ]home pay\b|(?:launch|signing|sign[- ]on) bonus|equity\s+(?:stakes?|grants?|granted|options?)\b|equity\s+[0-9]|\bvesting\b|\bRSUs?\b|stock options?\b|revenue[- ]share\s*[0-9]|7[- ]bucket/i;
     RATIO_SPLIT_PATTERN = /[0-9]{1,3}\s*\/\s*[0-9]{1,3}\s*(?:split|share)|[0-9]{1,2}\s*\/\s*[0-9]{1,2}\s*(?:max|→|->)\s*[0-9]{1,2}\s*\/\s*[0-9]{1,2}/i;
@@ -36798,9 +36800,9 @@ var init_disclosure_filter = __esm({
   }
 });
 
-// ../qmd-team-intent-kb/packages/common/dist/index.js
+// ../../../home/jeremy/000-projects/qmd-team-intent-kb/packages/common/dist/index.js
 var init_dist2 = __esm({
-  "../qmd-team-intent-kb/packages/common/dist/index.js"() {
+  "../../../home/jeremy/000-projects/qmd-team-intent-kb/packages/common/dist/index.js"() {
     "use strict";
     init_result();
     init_hash();
@@ -36812,7 +36814,7 @@ var init_dist2 = __esm({
   }
 });
 
-// ../qmd-team-intent-kb/packages/store/dist/repositories/enum-membership.js
+// ../../../home/jeremy/000-projects/qmd-team-intent-kb/packages/store/dist/repositories/enum-membership.js
 function assertEnumMembership(candidate) {
   const checks = [
     { field: "status", schema: CandidateStatus, value: candidate.status },
@@ -36847,7 +36849,7 @@ function assertEnumMembership(candidate) {
 }
 var EnumConstraintViolationError;
 var init_enum_membership = __esm({
-  "../qmd-team-intent-kb/packages/store/dist/repositories/enum-membership.js"() {
+  "../../../home/jeremy/000-projects/qmd-team-intent-kb/packages/store/dist/repositories/enum-membership.js"() {
     "use strict";
     init_dist();
     init_dist2();
@@ -36862,7 +36864,7 @@ var init_enum_membership = __esm({
   }
 });
 
-// ../qmd-team-intent-kb/packages/store/dist/repositories/candidate-repository.js
+// ../../../home/jeremy/000-projects/qmd-team-intent-kb/packages/store/dist/repositories/candidate-repository.js
 function rowToCandidate(row) {
   const flatResult = CandidateRowSchema.safeParse(row);
   if (!flatResult.success) {
@@ -36910,7 +36912,7 @@ function rowToCandidate(row) {
 }
 var import_zod11, CandidateRowSchema, CandidateRepository;
 var init_candidate_repository = __esm({
-  "../qmd-team-intent-kb/packages/store/dist/repositories/candidate-repository.js"() {
+  "../../../home/jeremy/000-projects/qmd-team-intent-kb/packages/store/dist/repositories/candidate-repository.js"() {
     "use strict";
     import_zod11 = __toESM(require_zod(), 1);
     init_dist();
@@ -37065,7 +37067,7 @@ var init_candidate_repository = __esm({
   }
 });
 
-// ../qmd-team-intent-kb/packages/store/dist/repositories/memory-repository.js
+// ../../../home/jeremy/000-projects/qmd-team-intent-kb/packages/store/dist/repositories/memory-repository.js
 function rowToMemory(row) {
   const flatResult = MemoryRowSchema.safeParse(row);
   if (!flatResult.success) {
@@ -37147,7 +37149,7 @@ function appendOptionalFilters(conditions, params, tenantId, categories, prefix)
 }
 var import_zod12, MemoryRowSchema, MemoryRepository;
 var init_memory_repository = __esm({
-  "../qmd-team-intent-kb/packages/store/dist/repositories/memory-repository.js"() {
+  "../../../home/jeremy/000-projects/qmd-team-intent-kb/packages/store/dist/repositories/memory-repository.js"() {
     "use strict";
     import_zod12 = __toESM(require_zod(), 1);
     init_dist();
@@ -37450,7 +37452,7 @@ var init_memory_repository = __esm({
   }
 });
 
-// ../qmd-team-intent-kb/packages/store/dist/repositories/policy-repository.js
+// ../../../home/jeremy/000-projects/qmd-team-intent-kb/packages/store/dist/repositories/policy-repository.js
 function rowToPolicy(row) {
   const flatResult = PolicyRowSchema.safeParse(row);
   if (!flatResult.success) {
@@ -37482,7 +37484,7 @@ function rowToPolicy(row) {
 }
 var import_zod13, PolicyRowSchema, PolicyRepository;
 var init_policy_repository = __esm({
-  "../qmd-team-intent-kb/packages/store/dist/repositories/policy-repository.js"() {
+  "../../../home/jeremy/000-projects/qmd-team-intent-kb/packages/store/dist/repositories/policy-repository.js"() {
     "use strict";
     import_zod13 = __toESM(require_zod(), 1);
     init_dist();
@@ -37581,7 +37583,7 @@ var init_policy_repository = __esm({
   }
 });
 
-// ../qmd-team-intent-kb/packages/store/dist/audit-chain.js
+// ../../../home/jeremy/000-projects/qmd-team-intent-kb/packages/store/dist/audit-chain.js
 function canonicalRowJsonV1(row) {
   return JSON.stringify({
     id: row.id,
@@ -37615,14 +37617,14 @@ function computeEntryHash(row, hashVersion = CURRENT_AUDIT_HASH_VERSION) {
 }
 var import_node_crypto4, CURRENT_AUDIT_HASH_VERSION;
 var init_audit_chain = __esm({
-  "../qmd-team-intent-kb/packages/store/dist/audit-chain.js"() {
+  "../../../home/jeremy/000-projects/qmd-team-intent-kb/packages/store/dist/audit-chain.js"() {
     "use strict";
     import_node_crypto4 = require("node:crypto");
     CURRENT_AUDIT_HASH_VERSION = 2;
   }
 });
 
-// ../qmd-team-intent-kb/packages/store/dist/repositories/audit-repository.js
+// ../../../home/jeremy/000-projects/qmd-team-intent-kb/packages/store/dist/repositories/audit-repository.js
 function rowToEvent(row) {
   const flatResult = AuditRowSchema.safeParse(row);
   if (!flatResult.success) {
@@ -37660,7 +37662,7 @@ function rowToEvent(row) {
 }
 var import_zod14, AuditRowSchema, AuditRepository;
 var init_audit_repository = __esm({
-  "../qmd-team-intent-kb/packages/store/dist/repositories/audit-repository.js"() {
+  "../../../home/jeremy/000-projects/qmd-team-intent-kb/packages/store/dist/repositories/audit-repository.js"() {
     "use strict";
     import_zod14 = __toESM(require_zod(), 1);
     init_dist();
@@ -37867,7 +37869,7 @@ var init_audit_repository = __esm({
   }
 });
 
-// ../qmd-team-intent-kb/packages/store/dist/audit-verify.js
+// ../../../home/jeremy/000-projects/qmd-team-intent-kb/packages/store/dist/audit-verify.js
 function rowHashVersion(row) {
   return row.hash_version === 2 ? 2 : 1;
 }
@@ -37938,13 +37940,13 @@ function verifyAuditChain(repo) {
   };
 }
 var init_audit_verify = __esm({
-  "../qmd-team-intent-kb/packages/store/dist/audit-verify.js"() {
+  "../../../home/jeremy/000-projects/qmd-team-intent-kb/packages/store/dist/audit-verify.js"() {
     "use strict";
     init_audit_chain();
   }
 });
 
-// ../qmd-team-intent-kb/packages/store/dist/audit-anchor.js
+// ../../../home/jeremy/000-projects/qmd-team-intent-kb/packages/store/dist/audit-anchor.js
 function anchorBodyJson(b) {
   return JSON.stringify({
     schemaVersion: b.schemaVersion,
@@ -38045,7 +38047,7 @@ function verifyAnchors(repo, anchorPath) {
 }
 var import_node_crypto5, import_node_fs2;
 var init_audit_anchor = __esm({
-  "../qmd-team-intent-kb/packages/store/dist/audit-anchor.js"() {
+  "../../../home/jeremy/000-projects/qmd-team-intent-kb/packages/store/dist/audit-anchor.js"() {
     "use strict";
     import_node_crypto5 = require("node:crypto");
     import_node_fs2 = require("node:fs");
@@ -38053,7 +38055,7 @@ var init_audit_anchor = __esm({
   }
 });
 
-// ../qmd-team-intent-kb/packages/store/dist/exception-manifest.js
+// ../../../home/jeremy/000-projects/qmd-team-intent-kb/packages/store/dist/exception-manifest.js
 function sortedEntries(entries) {
   return [...entries].sort((a, b) => {
     if (a.seq !== b.seq)
@@ -38154,7 +38156,7 @@ function classifyChainBreaks(breaks, manifest, rowsById) {
 }
 var import_node_crypto6, import_node_fs3, import_zod15, TAMPER_REASONS, TAMPER_REASON_SET, ExceptionManifestEntrySchema, ExceptionManifestSchema, ExceptionManifestError;
 var init_exception_manifest = __esm({
-  "../qmd-team-intent-kb/packages/store/dist/exception-manifest.js"() {
+  "../../../home/jeremy/000-projects/qmd-team-intent-kb/packages/store/dist/exception-manifest.js"() {
     "use strict";
     import_node_crypto6 = require("node:crypto");
     import_node_fs3 = require("node:fs");
@@ -38206,16 +38208,16 @@ var init_exception_manifest = __esm({
   }
 });
 
-// ../qmd-team-intent-kb/packages/store/dist/signed-merge-anchor.js
+// ../../../home/jeremy/000-projects/qmd-team-intent-kb/packages/store/dist/signed-merge-anchor.js
 var init_signed_merge_anchor = __esm({
-  "../qmd-team-intent-kb/packages/store/dist/signed-merge-anchor.js"() {
+  "../../../home/jeremy/000-projects/qmd-team-intent-kb/packages/store/dist/signed-merge-anchor.js"() {
     "use strict";
   }
 });
 
-// ../qmd-team-intent-kb/packages/store/dist/audit-verify-merge.js
+// ../../../home/jeremy/000-projects/qmd-team-intent-kb/packages/store/dist/audit-verify-merge.js
 var init_audit_verify_merge = __esm({
-  "../qmd-team-intent-kb/packages/store/dist/audit-verify-merge.js"() {
+  "../../../home/jeremy/000-projects/qmd-team-intent-kb/packages/store/dist/audit-verify-merge.js"() {
     "use strict";
     init_audit_chain();
     init_audit_verify();
@@ -38223,7 +38225,7 @@ var init_audit_verify_merge = __esm({
   }
 });
 
-// ../qmd-team-intent-kb/packages/store/dist/repositories/export-state-repository.js
+// ../../../home/jeremy/000-projects/qmd-team-intent-kb/packages/store/dist/repositories/export-state-repository.js
 function rowToState(row) {
   const result = ExportStateRowSchema.safeParse(row);
   if (!result.success) {
@@ -38239,7 +38241,7 @@ function rowToState(row) {
 }
 var import_zod16, ExportStateRowSchema, ExportStateRepository;
 var init_export_state_repository = __esm({
-  "../qmd-team-intent-kb/packages/store/dist/repositories/export-state-repository.js"() {
+  "../../../home/jeremy/000-projects/qmd-team-intent-kb/packages/store/dist/repositories/export-state-repository.js"() {
     "use strict";
     import_zod16 = __toESM(require_zod(), 1);
     ExportStateRowSchema = import_zod16.z.object({
@@ -38281,23 +38283,23 @@ var init_export_state_repository = __esm({
   }
 });
 
-// ../qmd-team-intent-kb/packages/store/dist/repositories/memory-links-repository.js
+// ../../../home/jeremy/000-projects/qmd-team-intent-kb/packages/store/dist/repositories/memory-links-repository.js
 var init_memory_links_repository = __esm({
-  "../qmd-team-intent-kb/packages/store/dist/repositories/memory-links-repository.js"() {
+  "../../../home/jeremy/000-projects/qmd-team-intent-kb/packages/store/dist/repositories/memory-links-repository.js"() {
     "use strict";
   }
 });
 
-// ../qmd-team-intent-kb/packages/store/dist/repositories/import-batch-repository.js
+// ../../../home/jeremy/000-projects/qmd-team-intent-kb/packages/store/dist/repositories/import-batch-repository.js
 var init_import_batch_repository = __esm({
-  "../qmd-team-intent-kb/packages/store/dist/repositories/import-batch-repository.js"() {
+  "../../../home/jeremy/000-projects/qmd-team-intent-kb/packages/store/dist/repositories/import-batch-repository.js"() {
     "use strict";
   }
 });
 
-// ../qmd-team-intent-kb/packages/store/dist/index.js
+// ../../../home/jeremy/000-projects/qmd-team-intent-kb/packages/store/dist/index.js
 var init_dist3 = __esm({
-  "../qmd-team-intent-kb/packages/store/dist/index.js"() {
+  "../../../home/jeremy/000-projects/qmd-team-intent-kb/packages/store/dist/index.js"() {
     "use strict";
     init_database();
     init_schema();
@@ -38318,7 +38320,7 @@ var init_dist3 = __esm({
   }
 });
 
-// ../qmd-team-intent-kb/packages/qmd-adapter/dist/config.js
+// ../../../home/jeremy/000-projects/qmd-team-intent-kb/packages/qmd-adapter/dist/config.js
 function getQmdTenantIndexPath(tenantId) {
   return resolveTeamKbPath(`${QMD_INDEX_DIR}/${tenantId}`);
 }
@@ -38331,7 +38333,7 @@ function getQmdTenantEnv(tenantId) {
 }
 var import_node_path3, QMD_INDEX_DIR, DEFAULT_QMD_BINARY, DEFAULT_TIMEOUT;
 var init_config = __esm({
-  "../qmd-team-intent-kb/packages/qmd-adapter/dist/config.js"() {
+  "../../../home/jeremy/000-projects/qmd-team-intent-kb/packages/qmd-adapter/dist/config.js"() {
     "use strict";
     import_node_path3 = require("node:path");
     init_dist2();
@@ -38341,10 +38343,10 @@ var init_config = __esm({
   }
 });
 
-// ../qmd-team-intent-kb/packages/qmd-adapter/dist/executor/real-executor.js
+// ../../../home/jeremy/000-projects/qmd-team-intent-kb/packages/qmd-adapter/dist/executor/real-executor.js
 var import_node_child_process, import_node_util, execFileAsync, RealQmdExecutor;
 var init_real_executor = __esm({
-  "../qmd-team-intent-kb/packages/qmd-adapter/dist/executor/real-executor.js"() {
+  "../../../home/jeremy/000-projects/qmd-team-intent-kb/packages/qmd-adapter/dist/executor/real-executor.js"() {
     "use strict";
     import_node_child_process = require("node:child_process");
     import_node_util = require("node:util");
@@ -38401,14 +38403,14 @@ var init_real_executor = __esm({
   }
 });
 
-// ../qmd-team-intent-kb/packages/qmd-adapter/dist/executor/mock-executor.js
+// ../../../home/jeremy/000-projects/qmd-team-intent-kb/packages/qmd-adapter/dist/executor/mock-executor.js
 var init_mock_executor = __esm({
-  "../qmd-team-intent-kb/packages/qmd-adapter/dist/executor/mock-executor.js"() {
+  "../../../home/jeremy/000-projects/qmd-team-intent-kb/packages/qmd-adapter/dist/executor/mock-executor.js"() {
     "use strict";
   }
 });
 
-// ../qmd-team-intent-kb/packages/qmd-adapter/dist/collections/collection-registry.js
+// ../../../home/jeremy/000-projects/qmd-team-intent-kb/packages/qmd-adapter/dist/collections/collection-registry.js
 function getDefaultSearchCollections() {
   return KNOWN_COLLECTIONS.filter((c) => c.includeInDefaultSearch).map((c) => c.name);
 }
@@ -38417,7 +38419,7 @@ function getExportableCollections() {
 }
 var KNOWN_COLLECTIONS;
 var init_collection_registry = __esm({
-  "../qmd-team-intent-kb/packages/qmd-adapter/dist/collections/collection-registry.js"() {
+  "../../../home/jeremy/000-projects/qmd-team-intent-kb/packages/qmd-adapter/dist/collections/collection-registry.js"() {
     "use strict";
     KNOWN_COLLECTIONS = [
       {
@@ -38454,10 +38456,10 @@ var init_collection_registry = __esm({
   }
 });
 
-// ../qmd-team-intent-kb/packages/qmd-adapter/dist/collections/collection-manager.js
+// ../../../home/jeremy/000-projects/qmd-team-intent-kb/packages/qmd-adapter/dist/collections/collection-manager.js
 var import_node_path4, CollectionManager;
 var init_collection_manager = __esm({
-  "../qmd-team-intent-kb/packages/qmd-adapter/dist/collections/collection-manager.js"() {
+  "../../../home/jeremy/000-projects/qmd-team-intent-kb/packages/qmd-adapter/dist/collections/collection-manager.js"() {
     "use strict";
     import_node_path4 = require("node:path");
     init_collection_registry();
@@ -38544,18 +38546,18 @@ var init_collection_manager = __esm({
   }
 });
 
-// ../qmd-team-intent-kb/packages/qmd-adapter/dist/index-manager/index-paths.js
+// ../../../home/jeremy/000-projects/qmd-team-intent-kb/packages/qmd-adapter/dist/index-manager/index-paths.js
 var init_index_paths = __esm({
-  "../qmd-team-intent-kb/packages/qmd-adapter/dist/index-manager/index-paths.js"() {
+  "../../../home/jeremy/000-projects/qmd-team-intent-kb/packages/qmd-adapter/dist/index-manager/index-paths.js"() {
     "use strict";
     init_config();
   }
 });
 
-// ../qmd-team-intent-kb/packages/qmd-adapter/dist/index-manager/index-lifecycle.js
+// ../../../home/jeremy/000-projects/qmd-team-intent-kb/packages/qmd-adapter/dist/index-manager/index-lifecycle.js
 var IndexLifecycleManager;
 var init_index_lifecycle = __esm({
-  "../qmd-team-intent-kb/packages/qmd-adapter/dist/index-manager/index-lifecycle.js"() {
+  "../../../home/jeremy/000-projects/qmd-team-intent-kb/packages/qmd-adapter/dist/index-manager/index-lifecycle.js"() {
     "use strict";
     IndexLifecycleManager = class {
       executor;
@@ -38631,7 +38633,7 @@ var init_index_lifecycle = __esm({
   }
 });
 
-// ../qmd-team-intent-kb/packages/qmd-adapter/dist/search/result-parser.js
+// ../../../home/jeremy/000-projects/qmd-team-intent-kb/packages/qmd-adapter/dist/search/result-parser.js
 function parseQueryOutput(stdout) {
   const trimmed = stdout.trim();
   if (!trimmed)
@@ -38670,15 +38672,15 @@ function deriveCollectionFromPath(filePath) {
   return "unknown";
 }
 var init_result_parser = __esm({
-  "../qmd-team-intent-kb/packages/qmd-adapter/dist/search/result-parser.js"() {
+  "../../../home/jeremy/000-projects/qmd-team-intent-kb/packages/qmd-adapter/dist/search/result-parser.js"() {
     "use strict";
   }
 });
 
-// ../qmd-team-intent-kb/packages/qmd-adapter/dist/search/search-client.js
+// ../../../home/jeremy/000-projects/qmd-team-intent-kb/packages/qmd-adapter/dist/search/search-client.js
 var SearchClient;
 var init_search_client = __esm({
-  "../qmd-team-intent-kb/packages/qmd-adapter/dist/search/search-client.js"() {
+  "../../../home/jeremy/000-projects/qmd-team-intent-kb/packages/qmd-adapter/dist/search/search-client.js"() {
     "use strict";
     init_collection_registry();
     init_result_parser();
@@ -38727,7 +38729,7 @@ var init_search_client = __esm({
   }
 });
 
-// ../qmd-team-intent-kb/packages/qmd-adapter/dist/health/health-check.js
+// ../../../home/jeremy/000-projects/qmd-team-intent-kb/packages/qmd-adapter/dist/health/health-check.js
 async function checkHealth(executor) {
   const available = await executor.isAvailable();
   if (!available) {
@@ -38754,15 +38756,15 @@ async function checkHealth(executor) {
   return { available, version, initialized, collections };
 }
 var init_health_check = __esm({
-  "../qmd-team-intent-kb/packages/qmd-adapter/dist/health/health-check.js"() {
+  "../../../home/jeremy/000-projects/qmd-team-intent-kb/packages/qmd-adapter/dist/health/health-check.js"() {
     "use strict";
   }
 });
 
-// ../qmd-team-intent-kb/packages/qmd-adapter/dist/adapter.js
+// ../../../home/jeremy/000-projects/qmd-team-intent-kb/packages/qmd-adapter/dist/adapter.js
 var import_node_fs4, import_node_path5, QmdAdapter;
 var init_adapter = __esm({
-  "../qmd-team-intent-kb/packages/qmd-adapter/dist/adapter.js"() {
+  "../../../home/jeremy/000-projects/qmd-team-intent-kb/packages/qmd-adapter/dist/adapter.js"() {
     "use strict";
     import_node_fs4 = require("node:fs");
     import_node_path5 = require("node:path");
@@ -38843,77 +38845,77 @@ var init_adapter = __esm({
   }
 });
 
-// ../qmd-team-intent-kb/packages/qmd-adapter/dist/weights/verify-weights.js
+// ../../../home/jeremy/000-projects/qmd-team-intent-kb/packages/qmd-adapter/dist/weights/verify-weights.js
 var init_verify_weights = __esm({
-  "../qmd-team-intent-kb/packages/qmd-adapter/dist/weights/verify-weights.js"() {
+  "../../../home/jeremy/000-projects/qmd-team-intent-kb/packages/qmd-adapter/dist/weights/verify-weights.js"() {
     "use strict";
     init_dist2();
   }
 });
 
-// ../qmd-team-intent-kb/packages/qmd-adapter/dist/weights/weights-manifest.js
+// ../../../home/jeremy/000-projects/qmd-team-intent-kb/packages/qmd-adapter/dist/weights/weights-manifest.js
 var init_weights_manifest = __esm({
-  "../qmd-team-intent-kb/packages/qmd-adapter/dist/weights/weights-manifest.js"() {
+  "../../../home/jeremy/000-projects/qmd-team-intent-kb/packages/qmd-adapter/dist/weights/weights-manifest.js"() {
     "use strict";
   }
 });
 
-// ../qmd-team-intent-kb/packages/qmd-adapter/dist/weights/index.js
+// ../../../home/jeremy/000-projects/qmd-team-intent-kb/packages/qmd-adapter/dist/weights/index.js
 var init_weights = __esm({
-  "../qmd-team-intent-kb/packages/qmd-adapter/dist/weights/index.js"() {
+  "../../../home/jeremy/000-projects/qmd-team-intent-kb/packages/qmd-adapter/dist/weights/index.js"() {
     "use strict";
     init_verify_weights();
     init_weights_manifest();
   }
 });
 
-// ../qmd-team-intent-kb/packages/qmd-adapter/dist/eval/metrics.js
+// ../../../home/jeremy/000-projects/qmd-team-intent-kb/packages/qmd-adapter/dist/eval/metrics.js
 var init_metrics = __esm({
-  "../qmd-team-intent-kb/packages/qmd-adapter/dist/eval/metrics.js"() {
+  "../../../home/jeremy/000-projects/qmd-team-intent-kb/packages/qmd-adapter/dist/eval/metrics.js"() {
     "use strict";
   }
 });
 
-// ../qmd-team-intent-kb/packages/qmd-adapter/dist/eval/run-eval.js
+// ../../../home/jeremy/000-projects/qmd-team-intent-kb/packages/qmd-adapter/dist/eval/run-eval.js
 var init_run_eval = __esm({
-  "../qmd-team-intent-kb/packages/qmd-adapter/dist/eval/run-eval.js"() {
+  "../../../home/jeremy/000-projects/qmd-team-intent-kb/packages/qmd-adapter/dist/eval/run-eval.js"() {
     "use strict";
     init_metrics();
   }
 });
 
-// ../qmd-team-intent-kb/packages/qmd-adapter/dist/eval/datasets/seed-queries.js
+// ../../../home/jeremy/000-projects/qmd-team-intent-kb/packages/qmd-adapter/dist/eval/datasets/seed-queries.js
 var init_seed_queries = __esm({
-  "../qmd-team-intent-kb/packages/qmd-adapter/dist/eval/datasets/seed-queries.js"() {
+  "../../../home/jeremy/000-projects/qmd-team-intent-kb/packages/qmd-adapter/dist/eval/datasets/seed-queries.js"() {
     "use strict";
   }
 });
 
-// ../qmd-team-intent-kb/packages/qmd-adapter/dist/eval/stratified-report.js
+// ../../../home/jeremy/000-projects/qmd-team-intent-kb/packages/qmd-adapter/dist/eval/stratified-report.js
 var init_stratified_report = __esm({
-  "../qmd-team-intent-kb/packages/qmd-adapter/dist/eval/stratified-report.js"() {
+  "../../../home/jeremy/000-projects/qmd-team-intent-kb/packages/qmd-adapter/dist/eval/stratified-report.js"() {
     "use strict";
     init_metrics();
   }
 });
 
-// ../qmd-team-intent-kb/packages/qmd-adapter/dist/eval/qmd-retrieval.js
+// ../../../home/jeremy/000-projects/qmd-team-intent-kb/packages/qmd-adapter/dist/eval/qmd-retrieval.js
 var init_qmd_retrieval = __esm({
-  "../qmd-team-intent-kb/packages/qmd-adapter/dist/eval/qmd-retrieval.js"() {
+  "../../../home/jeremy/000-projects/qmd-team-intent-kb/packages/qmd-adapter/dist/eval/qmd-retrieval.js"() {
     "use strict";
   }
 });
 
-// ../qmd-team-intent-kb/packages/qmd-adapter/dist/eval/datasets/governed-brain-v1.js
+// ../../../home/jeremy/000-projects/qmd-team-intent-kb/packages/qmd-adapter/dist/eval/datasets/governed-brain-v1.js
 var init_governed_brain_v1 = __esm({
-  "../qmd-team-intent-kb/packages/qmd-adapter/dist/eval/datasets/governed-brain-v1.js"() {
+  "../../../home/jeremy/000-projects/qmd-team-intent-kb/packages/qmd-adapter/dist/eval/datasets/governed-brain-v1.js"() {
     "use strict";
   }
 });
 
-// ../qmd-team-intent-kb/packages/qmd-adapter/dist/eval/index.js
+// ../../../home/jeremy/000-projects/qmd-team-intent-kb/packages/qmd-adapter/dist/eval/index.js
 var init_eval = __esm({
-  "../qmd-team-intent-kb/packages/qmd-adapter/dist/eval/index.js"() {
+  "../../../home/jeremy/000-projects/qmd-team-intent-kb/packages/qmd-adapter/dist/eval/index.js"() {
     "use strict";
     init_metrics();
     init_run_eval();
@@ -38924,41 +38926,41 @@ var init_eval = __esm({
   }
 });
 
-// ../qmd-team-intent-kb/packages/qmd-adapter/dist/native/fts5-backend.js
+// ../../../home/jeremy/000-projects/qmd-team-intent-kb/packages/qmd-adapter/dist/native/fts5-backend.js
 var import_better_sqlite32;
 var init_fts5_backend = __esm({
-  "../qmd-team-intent-kb/packages/qmd-adapter/dist/native/fts5-backend.js"() {
+  "../../../home/jeremy/000-projects/qmd-team-intent-kb/packages/qmd-adapter/dist/native/fts5-backend.js"() {
     "use strict";
     import_better_sqlite32 = __toESM(require("better-sqlite3"), 1);
   }
 });
 
-// ../qmd-team-intent-kb/packages/qmd-adapter/dist/native/index.js
+// ../../../home/jeremy/000-projects/qmd-team-intent-kb/packages/qmd-adapter/dist/native/index.js
 var init_native = __esm({
-  "../qmd-team-intent-kb/packages/qmd-adapter/dist/native/index.js"() {
+  "../../../home/jeremy/000-projects/qmd-team-intent-kb/packages/qmd-adapter/dist/native/index.js"() {
     "use strict";
     init_fts5_backend();
   }
 });
 
-// ../qmd-team-intent-kb/packages/qmd-adapter/dist/reindex/reindex.js
+// ../../../home/jeremy/000-projects/qmd-team-intent-kb/packages/qmd-adapter/dist/reindex/reindex.js
 var init_reindex = __esm({
-  "../qmd-team-intent-kb/packages/qmd-adapter/dist/reindex/reindex.js"() {
+  "../../../home/jeremy/000-projects/qmd-team-intent-kb/packages/qmd-adapter/dist/reindex/reindex.js"() {
     "use strict";
   }
 });
 
-// ../qmd-team-intent-kb/packages/qmd-adapter/dist/canary/search-canary.js
+// ../../../home/jeremy/000-projects/qmd-team-intent-kb/packages/qmd-adapter/dist/canary/search-canary.js
 var init_search_canary = __esm({
-  "../qmd-team-intent-kb/packages/qmd-adapter/dist/canary/search-canary.js"() {
+  "../../../home/jeremy/000-projects/qmd-team-intent-kb/packages/qmd-adapter/dist/canary/search-canary.js"() {
     "use strict";
     init_reindex();
   }
 });
 
-// ../qmd-team-intent-kb/packages/qmd-adapter/dist/index.js
+// ../../../home/jeremy/000-projects/qmd-team-intent-kb/packages/qmd-adapter/dist/index.js
 var init_dist4 = __esm({
-  "../qmd-team-intent-kb/packages/qmd-adapter/dist/index.js"() {
+  "../../../home/jeremy/000-projects/qmd-team-intent-kb/packages/qmd-adapter/dist/index.js"() {
     "use strict";
     init_config();
     init_real_executor();
@@ -38979,7 +38981,7 @@ var init_dist4 = __esm({
   }
 });
 
-// ../qmd-team-intent-kb/packages/claude-runtime/dist/config.js
+// ../../../home/jeremy/000-projects/qmd-team-intent-kb/packages/claude-runtime/dist/config.js
 function getSpoolPath() {
   return resolveTeamKbPath(SPOOL_DIR);
 }
@@ -38990,17 +38992,17 @@ function getSpoolFilename(date) {
 }
 var SPOOL_DIR;
 var init_config2 = __esm({
-  "../qmd-team-intent-kb/packages/claude-runtime/dist/config.js"() {
+  "../../../home/jeremy/000-projects/qmd-team-intent-kb/packages/claude-runtime/dist/config.js"() {
     "use strict";
     init_dist2();
     SPOOL_DIR = "spool";
   }
 });
 
-// ../qmd-team-intent-kb/packages/claude-runtime/dist/secrets/patterns.js
+// ../../../home/jeremy/000-projects/qmd-team-intent-kb/packages/claude-runtime/dist/secrets/patterns.js
 var SECRET_PATTERNS2, PII_PATTERNS;
 var init_patterns = __esm({
-  "../qmd-team-intent-kb/packages/claude-runtime/dist/secrets/patterns.js"() {
+  "../../../home/jeremy/000-projects/qmd-team-intent-kb/packages/claude-runtime/dist/secrets/patterns.js"() {
     "use strict";
     SECRET_PATTERNS2 = [
       {
@@ -39161,7 +39163,7 @@ var init_patterns = __esm({
   }
 });
 
-// ../qmd-team-intent-kb/packages/claude-runtime/dist/secrets/secret-scanner.js
+// ../../../home/jeremy/000-projects/qmd-team-intent-kb/packages/claude-runtime/dist/secrets/secret-scanner.js
 function execWithContext(pattern, text, contextText) {
   if (pattern.regex.global || pattern.regex.sticky) {
     pattern.regex.lastIndex = 0;
@@ -39336,7 +39338,7 @@ function scanForSecrets(content, patterns = SECRET_PATTERNS2) {
 }
 var LIMITS, BASE64_CANDIDATE_RE, HEX_CANDIDATE_RE;
 var init_secret_scanner = __esm({
-  "../qmd-team-intent-kb/packages/claude-runtime/dist/secrets/secret-scanner.js"() {
+  "../../../home/jeremy/000-projects/qmd-team-intent-kb/packages/claude-runtime/dist/secrets/secret-scanner.js"() {
     "use strict";
     init_patterns();
     LIMITS = {
@@ -39356,15 +39358,15 @@ var init_secret_scanner = __esm({
   }
 });
 
-// ../qmd-team-intent-kb/packages/claude-runtime/dist/secrets/redactor.js
+// ../../../home/jeremy/000-projects/qmd-team-intent-kb/packages/claude-runtime/dist/secrets/redactor.js
 var init_redactor = __esm({
-  "../qmd-team-intent-kb/packages/claude-runtime/dist/secrets/redactor.js"() {
+  "../../../home/jeremy/000-projects/qmd-team-intent-kb/packages/claude-runtime/dist/secrets/redactor.js"() {
     "use strict";
     init_patterns();
   }
 });
 
-// ../qmd-team-intent-kb/packages/claude-runtime/dist/secrets/content-classifier.js
+// ../../../home/jeremy/000-projects/qmd-team-intent-kb/packages/claude-runtime/dist/secrets/content-classifier.js
 function classifyContent(content) {
   const credentialMatches = scanForSecrets(content, SECRET_PATTERNS2);
   const piiMatches = scanForSecrets(content, PII_PATTERNS);
@@ -39402,7 +39404,7 @@ function classifyContent(content) {
 }
 var INTERNAL_PATH_PATTERNS;
 var init_content_classifier = __esm({
-  "../qmd-team-intent-kb/packages/claude-runtime/dist/secrets/content-classifier.js"() {
+  "../../../home/jeremy/000-projects/qmd-team-intent-kb/packages/claude-runtime/dist/secrets/content-classifier.js"() {
     "use strict";
     init_secret_scanner();
     init_patterns();
@@ -39414,9 +39416,9 @@ var init_content_classifier = __esm({
   }
 });
 
-// ../qmd-team-intent-kb/packages/claude-runtime/dist/capture/candidate-builder.js
+// ../../../home/jeremy/000-projects/qmd-team-intent-kb/packages/claude-runtime/dist/capture/candidate-builder.js
 var init_candidate_builder = __esm({
-  "../qmd-team-intent-kb/packages/claude-runtime/dist/capture/candidate-builder.js"() {
+  "../../../home/jeremy/000-projects/qmd-team-intent-kb/packages/claude-runtime/dist/capture/candidate-builder.js"() {
     "use strict";
     init_dist();
     init_dist2();
@@ -39424,10 +39426,10 @@ var init_candidate_builder = __esm({
   }
 });
 
-// ../qmd-team-intent-kb/packages/repo-resolver/dist/types.js
+// ../../../home/jeremy/000-projects/qmd-team-intent-kb/packages/repo-resolver/dist/types.js
 var import_zod17, RepoContext, ResolverError;
 var init_types2 = __esm({
-  "../qmd-team-intent-kb/packages/repo-resolver/dist/types.js"() {
+  "../../../home/jeremy/000-projects/qmd-team-intent-kb/packages/repo-resolver/dist/types.js"() {
     "use strict";
     import_zod17 = __toESM(require_zod(), 1);
     RepoContext = import_zod17.z.object({
@@ -39458,17 +39460,17 @@ var init_types2 = __esm({
   }
 });
 
-// ../qmd-team-intent-kb/packages/repo-resolver/dist/git.js
+// ../../../home/jeremy/000-projects/qmd-team-intent-kb/packages/repo-resolver/dist/git.js
 var init_git = __esm({
-  "../qmd-team-intent-kb/packages/repo-resolver/dist/git.js"() {
+  "../../../home/jeremy/000-projects/qmd-team-intent-kb/packages/repo-resolver/dist/git.js"() {
     "use strict";
   }
 });
 
-// ../qmd-team-intent-kb/packages/repo-resolver/dist/cache.js
+// ../../../home/jeremy/000-projects/qmd-team-intent-kb/packages/repo-resolver/dist/cache.js
 var DEFAULT_TTL_MS, RepoContextCache, defaultCache;
 var init_cache = __esm({
-  "../qmd-team-intent-kb/packages/repo-resolver/dist/cache.js"() {
+  "../../../home/jeremy/000-projects/qmd-team-intent-kb/packages/repo-resolver/dist/cache.js"() {
     "use strict";
     DEFAULT_TTL_MS = 5 * 60 * 1e3;
     RepoContextCache = class {
@@ -39531,18 +39533,18 @@ var init_cache = __esm({
   }
 });
 
-// ../qmd-team-intent-kb/packages/repo-resolver/dist/monorepo.js
+// ../../../home/jeremy/000-projects/qmd-team-intent-kb/packages/repo-resolver/dist/monorepo.js
 var MAX_MANIFEST_SIZE;
 var init_monorepo = __esm({
-  "../qmd-team-intent-kb/packages/repo-resolver/dist/monorepo.js"() {
+  "../../../home/jeremy/000-projects/qmd-team-intent-kb/packages/repo-resolver/dist/monorepo.js"() {
     "use strict";
     MAX_MANIFEST_SIZE = 64 * 1024;
   }
 });
 
-// ../qmd-team-intent-kb/packages/repo-resolver/dist/resolver.js
+// ../../../home/jeremy/000-projects/qmd-team-intent-kb/packages/repo-resolver/dist/resolver.js
 var init_resolver = __esm({
-  "../qmd-team-intent-kb/packages/repo-resolver/dist/resolver.js"() {
+  "../../../home/jeremy/000-projects/qmd-team-intent-kb/packages/repo-resolver/dist/resolver.js"() {
     "use strict";
     init_dist2();
     init_git();
@@ -39551,18 +39553,18 @@ var init_resolver = __esm({
   }
 });
 
-// ../qmd-team-intent-kb/packages/repo-resolver/dist/tenant.js
+// ../../../home/jeremy/000-projects/qmd-team-intent-kb/packages/repo-resolver/dist/tenant.js
 var MAX_CONFIG_SIZE;
 var init_tenant = __esm({
-  "../qmd-team-intent-kb/packages/repo-resolver/dist/tenant.js"() {
+  "../../../home/jeremy/000-projects/qmd-team-intent-kb/packages/repo-resolver/dist/tenant.js"() {
     "use strict";
     MAX_CONFIG_SIZE = 64 * 1024;
   }
 });
 
-// ../qmd-team-intent-kb/packages/repo-resolver/dist/index.js
+// ../../../home/jeremy/000-projects/qmd-team-intent-kb/packages/repo-resolver/dist/index.js
 var init_dist5 = __esm({
-  "../qmd-team-intent-kb/packages/repo-resolver/dist/index.js"() {
+  "../../../home/jeremy/000-projects/qmd-team-intent-kb/packages/repo-resolver/dist/index.js"() {
     "use strict";
     init_types2();
     init_resolver();
@@ -39572,10 +39574,10 @@ var init_dist5 = __esm({
   }
 });
 
-// ../qmd-team-intent-kb/packages/claude-runtime/dist/capture/git-context.js
+// ../../../home/jeremy/000-projects/qmd-team-intent-kb/packages/claude-runtime/dist/capture/git-context.js
 var import_node_child_process2, import_node_util2, execFileAsync2;
 var init_git_context = __esm({
-  "../qmd-team-intent-kb/packages/claude-runtime/dist/capture/git-context.js"() {
+  "../../../home/jeremy/000-projects/qmd-team-intent-kb/packages/claude-runtime/dist/capture/git-context.js"() {
     "use strict";
     import_node_child_process2 = require("node:child_process");
     import_node_util2 = require("node:util");
@@ -39583,16 +39585,16 @@ var init_git_context = __esm({
   }
 });
 
-// ../qmd-team-intent-kb/packages/claude-runtime/dist/capture/context-provider.js
+// ../../../home/jeremy/000-projects/qmd-team-intent-kb/packages/claude-runtime/dist/capture/context-provider.js
 var init_context_provider = __esm({
-  "../qmd-team-intent-kb/packages/claude-runtime/dist/capture/context-provider.js"() {
+  "../../../home/jeremy/000-projects/qmd-team-intent-kb/packages/claude-runtime/dist/capture/context-provider.js"() {
     "use strict";
     init_dist5();
     init_git_context();
   }
 });
 
-// ../qmd-team-intent-kb/packages/claude-runtime/dist/spool/spool-writer.js
+// ../../../home/jeremy/000-projects/qmd-team-intent-kb/packages/claude-runtime/dist/spool/spool-writer.js
 async function writeToSpool(candidate, spoolDir, agentId) {
   const dir = spoolDir ?? getSpoolPath();
   const filename = agentId ? `spool-${agentId}.jsonl` : getSpoolFilename();
@@ -39621,7 +39623,7 @@ async function writeToSpool(candidate, spoolDir, agentId) {
 }
 var import_promises, import_node_path6;
 var init_spool_writer = __esm({
-  "../qmd-team-intent-kb/packages/claude-runtime/dist/spool/spool-writer.js"() {
+  "../../../home/jeremy/000-projects/qmd-team-intent-kb/packages/claude-runtime/dist/spool/spool-writer.js"() {
     "use strict";
     import_promises = require("node:fs/promises");
     import_node_path6 = require("node:path");
@@ -39630,7 +39632,7 @@ var init_spool_writer = __esm({
   }
 });
 
-// ../qmd-team-intent-kb/packages/claude-runtime/dist/spool/spool-reader.js
+// ../../../home/jeremy/000-projects/qmd-team-intent-kb/packages/claude-runtime/dist/spool/spool-reader.js
 async function verifySpoolManifest(spoolFilePath) {
   const manifestPath2 = `${spoolFilePath}.manifest.json`;
   let manifestRaw;
@@ -39696,7 +39698,7 @@ async function listSpoolFiles(spoolDir) {
 }
 var import_node_crypto7, import_promises2, import_node_path7;
 var init_spool_reader = __esm({
-  "../qmd-team-intent-kb/packages/claude-runtime/dist/spool/spool-reader.js"() {
+  "../../../home/jeremy/000-projects/qmd-team-intent-kb/packages/claude-runtime/dist/spool/spool-reader.js"() {
     "use strict";
     import_node_crypto7 = require("node:crypto");
     import_promises2 = require("node:fs/promises");
@@ -39706,48 +39708,48 @@ var init_spool_reader = __esm({
   }
 });
 
-// ../qmd-team-intent-kb/packages/claude-runtime/dist/spool/write-jsonl.js
+// ../../../home/jeremy/000-projects/qmd-team-intent-kb/packages/claude-runtime/dist/spool/write-jsonl.js
 var init_write_jsonl = __esm({
-  "../qmd-team-intent-kb/packages/claude-runtime/dist/spool/write-jsonl.js"() {
+  "../../../home/jeremy/000-projects/qmd-team-intent-kb/packages/claude-runtime/dist/spool/write-jsonl.js"() {
     "use strict";
   }
 });
 
-// ../qmd-team-intent-kb/packages/claude-runtime/dist/spool/failure-bucket.js
+// ../../../home/jeremy/000-projects/qmd-team-intent-kb/packages/claude-runtime/dist/spool/failure-bucket.js
 var init_failure_bucket = __esm({
-  "../qmd-team-intent-kb/packages/claude-runtime/dist/spool/failure-bucket.js"() {
+  "../../../home/jeremy/000-projects/qmd-team-intent-kb/packages/claude-runtime/dist/spool/failure-bucket.js"() {
     "use strict";
     init_config2();
     init_write_jsonl();
   }
 });
 
-// ../qmd-team-intent-kb/packages/claude-runtime/dist/spool/redaction-audit.js
+// ../../../home/jeremy/000-projects/qmd-team-intent-kb/packages/claude-runtime/dist/spool/redaction-audit.js
 var init_redaction_audit = __esm({
-  "../qmd-team-intent-kb/packages/claude-runtime/dist/spool/redaction-audit.js"() {
+  "../../../home/jeremy/000-projects/qmd-team-intent-kb/packages/claude-runtime/dist/spool/redaction-audit.js"() {
     "use strict";
     init_config2();
     init_write_jsonl();
   }
 });
 
-// ../qmd-team-intent-kb/packages/claude-runtime/dist/templates/hook-templates.js
+// ../../../home/jeremy/000-projects/qmd-team-intent-kb/packages/claude-runtime/dist/templates/hook-templates.js
 var init_hook_templates = __esm({
-  "../qmd-team-intent-kb/packages/claude-runtime/dist/templates/hook-templates.js"() {
+  "../../../home/jeremy/000-projects/qmd-team-intent-kb/packages/claude-runtime/dist/templates/hook-templates.js"() {
     "use strict";
   }
 });
 
-// ../qmd-team-intent-kb/packages/claude-runtime/dist/templates/claudemd-templates.js
+// ../../../home/jeremy/000-projects/qmd-team-intent-kb/packages/claude-runtime/dist/templates/claudemd-templates.js
 var init_claudemd_templates = __esm({
-  "../qmd-team-intent-kb/packages/claude-runtime/dist/templates/claudemd-templates.js"() {
+  "../../../home/jeremy/000-projects/qmd-team-intent-kb/packages/claude-runtime/dist/templates/claudemd-templates.js"() {
     "use strict";
   }
 });
 
-// ../qmd-team-intent-kb/packages/claude-runtime/dist/index.js
+// ../../../home/jeremy/000-projects/qmd-team-intent-kb/packages/claude-runtime/dist/index.js
 var init_dist6 = __esm({
-  "../qmd-team-intent-kb/packages/claude-runtime/dist/index.js"() {
+  "../../../home/jeremy/000-projects/qmd-team-intent-kb/packages/claude-runtime/dist/index.js"() {
     "use strict";
     init_config2();
     init_patterns();
@@ -39788,7 +39790,7 @@ var init_config3 = __esm({
   }
 });
 
-// ../qmd-team-intent-kb/packages/policy-engine/dist/rules/secret-detection-rule.js
+// ../../../home/jeremy/000-projects/qmd-team-intent-kb/packages/policy-engine/dist/rules/secret-detection-rule.js
 function evaluateSecretDetection(candidate, rule, _context) {
   const matches = scanForSecrets(candidate.content);
   if (matches.length === 0) {
@@ -39809,13 +39811,13 @@ function evaluateSecretDetection(candidate, rule, _context) {
   };
 }
 var init_secret_detection_rule = __esm({
-  "../qmd-team-intent-kb/packages/policy-engine/dist/rules/secret-detection-rule.js"() {
+  "../../../home/jeremy/000-projects/qmd-team-intent-kb/packages/policy-engine/dist/rules/secret-detection-rule.js"() {
     "use strict";
     init_dist6();
   }
 });
 
-// ../qmd-team-intent-kb/packages/policy-engine/dist/rules/content-length-rule.js
+// ../../../home/jeremy/000-projects/qmd-team-intent-kb/packages/policy-engine/dist/rules/content-length-rule.js
 function evaluateContentLength(candidate, rule, _context) {
   const min = typeof rule.parameters["min"] === "number" ? rule.parameters["min"] : DEFAULT_MIN;
   const max = typeof rule.parameters["max"] === "number" ? rule.parameters["max"] : DEFAULT_MAX;
@@ -39847,14 +39849,14 @@ function evaluateContentLength(candidate, rule, _context) {
 }
 var DEFAULT_MIN, DEFAULT_MAX;
 var init_content_length_rule = __esm({
-  "../qmd-team-intent-kb/packages/policy-engine/dist/rules/content-length-rule.js"() {
+  "../../../home/jeremy/000-projects/qmd-team-intent-kb/packages/policy-engine/dist/rules/content-length-rule.js"() {
     "use strict";
     DEFAULT_MIN = 10;
     DEFAULT_MAX = 5e4;
   }
 });
 
-// ../qmd-team-intent-kb/packages/policy-engine/dist/rules/source-trust-rule.js
+// ../../../home/jeremy/000-projects/qmd-team-intent-kb/packages/policy-engine/dist/rules/source-trust-rule.js
 function isTrustLevel(value) {
   return value === "high" || value === "medium" || value === "low" || value === "untrusted";
 }
@@ -39883,7 +39885,7 @@ function evaluateSourceTrust(candidate, rule, _context) {
 }
 var TRUST_ORDER, DEFAULT_MINIMUM_TRUST;
 var init_source_trust_rule = __esm({
-  "../qmd-team-intent-kb/packages/policy-engine/dist/rules/source-trust-rule.js"() {
+  "../../../home/jeremy/000-projects/qmd-team-intent-kb/packages/policy-engine/dist/rules/source-trust-rule.js"() {
     "use strict";
     TRUST_ORDER = {
       high: 4,
@@ -39895,7 +39897,7 @@ var init_source_trust_rule = __esm({
   }
 });
 
-// ../qmd-team-intent-kb/packages/policy-engine/dist/rules/relevance-score-rule.js
+// ../../../home/jeremy/000-projects/qmd-team-intent-kb/packages/policy-engine/dist/rules/relevance-score-rule.js
 function evaluateRelevanceScore(candidate, rule, _context) {
   const minimumScore = typeof rule.parameters["minimumScore"] === "number" ? rule.parameters["minimumScore"] : DEFAULT_MINIMUM_SCORE;
   let score = 0;
@@ -39949,13 +39951,13 @@ function evaluateRelevanceScore(candidate, rule, _context) {
 }
 var DEFAULT_MINIMUM_SCORE;
 var init_relevance_score_rule = __esm({
-  "../qmd-team-intent-kb/packages/policy-engine/dist/rules/relevance-score-rule.js"() {
+  "../../../home/jeremy/000-projects/qmd-team-intent-kb/packages/policy-engine/dist/rules/relevance-score-rule.js"() {
     "use strict";
     DEFAULT_MINIMUM_SCORE = 0.3;
   }
 });
 
-// ../qmd-team-intent-kb/packages/policy-engine/dist/rules/dedup-check-rule.js
+// ../../../home/jeremy/000-projects/qmd-team-intent-kb/packages/policy-engine/dist/rules/dedup-check-rule.js
 function evaluateDedupCheck(candidate, rule, context) {
   if (context.existingHashes === void 0 || context.existingHashes.size === 0) {
     return {
@@ -39982,13 +39984,13 @@ function evaluateDedupCheck(candidate, rule, context) {
   };
 }
 var init_dedup_check_rule = __esm({
-  "../qmd-team-intent-kb/packages/policy-engine/dist/rules/dedup-check-rule.js"() {
+  "../../../home/jeremy/000-projects/qmd-team-intent-kb/packages/policy-engine/dist/rules/dedup-check-rule.js"() {
     "use strict";
     init_dist2();
   }
 });
 
-// ../qmd-team-intent-kb/packages/policy-engine/dist/rules/tenant-match-rule.js
+// ../../../home/jeremy/000-projects/qmd-team-intent-kb/packages/policy-engine/dist/rules/tenant-match-rule.js
 function evaluateTenantMatch(candidate, rule, context) {
   if (context.tenantId === void 0) {
     return {
@@ -40014,12 +40016,12 @@ function evaluateTenantMatch(candidate, rule, context) {
   };
 }
 var init_tenant_match_rule = __esm({
-  "../qmd-team-intent-kb/packages/policy-engine/dist/rules/tenant-match-rule.js"() {
+  "../../../home/jeremy/000-projects/qmd-team-intent-kb/packages/policy-engine/dist/rules/tenant-match-rule.js"() {
     "use strict";
   }
 });
 
-// ../qmd-team-intent-kb/packages/policy-engine/dist/rules/sensitivity-gate-rule.js
+// ../../../home/jeremy/000-projects/qmd-team-intent-kb/packages/policy-engine/dist/rules/sensitivity-gate-rule.js
 function parseBlockedLevels(params) {
   if (!params || !Array.isArray(params["blockedLevels"]))
     return DEFAULT_BLOCKED_LEVELS;
@@ -40047,7 +40049,7 @@ function evaluateSensitivityGate(candidate, rule, _context) {
 }
 var VALID_LEVELS, DEFAULT_BLOCKED_LEVELS;
 var init_sensitivity_gate_rule = __esm({
-  "../qmd-team-intent-kb/packages/policy-engine/dist/rules/sensitivity-gate-rule.js"() {
+  "../../../home/jeremy/000-projects/qmd-team-intent-kb/packages/policy-engine/dist/rules/sensitivity-gate-rule.js"() {
     "use strict";
     init_dist6();
     init_dist();
@@ -40056,7 +40058,7 @@ var init_sensitivity_gate_rule = __esm({
   }
 });
 
-// ../qmd-team-intent-kb/packages/policy-engine/dist/rules/content-sanitization-rule.js
+// ../../../home/jeremy/000-projects/qmd-team-intent-kb/packages/policy-engine/dist/rules/content-sanitization-rule.js
 function evaluateContentSanitization(candidate, rule, _context) {
   const params = rule.parameters;
   const enabledPatternIds = Array.isArray(params["enabledPatterns"]) ? params["enabledPatterns"].filter((v) => typeof v === "string") : void 0;
@@ -40084,7 +40086,7 @@ function evaluateContentSanitization(candidate, rule, _context) {
 }
 var DEFAULT_PATTERNS;
 var init_content_sanitization_rule = __esm({
-  "../qmd-team-intent-kb/packages/policy-engine/dist/rules/content-sanitization-rule.js"() {
+  "../../../home/jeremy/000-projects/qmd-team-intent-kb/packages/policy-engine/dist/rules/content-sanitization-rule.js"() {
     "use strict";
     DEFAULT_PATTERNS = [
       {
@@ -40121,14 +40123,14 @@ var init_content_sanitization_rule = __esm({
   }
 });
 
-// ../qmd-team-intent-kb/packages/policy-engine/dist/rules/index.js
+// ../../../home/jeremy/000-projects/qmd-team-intent-kb/packages/policy-engine/dist/rules/index.js
 function createRule(type) {
   const evaluator = RULE_REGISTRY[type];
   return evaluator;
 }
 var RULE_REGISTRY;
 var init_rules = __esm({
-  "../qmd-team-intent-kb/packages/policy-engine/dist/rules/index.js"() {
+  "../../../home/jeremy/000-projects/qmd-team-intent-kb/packages/policy-engine/dist/rules/index.js"() {
     "use strict";
     init_secret_detection_rule();
     init_content_length_rule();
@@ -40151,10 +40153,10 @@ var init_rules = __esm({
   }
 });
 
-// ../qmd-team-intent-kb/packages/policy-engine/dist/pipeline.js
+// ../../../home/jeremy/000-projects/qmd-team-intent-kb/packages/policy-engine/dist/pipeline.js
 var PolicyPipeline;
 var init_pipeline2 = __esm({
-  "../qmd-team-intent-kb/packages/policy-engine/dist/pipeline.js"() {
+  "../../../home/jeremy/000-projects/qmd-team-intent-kb/packages/policy-engine/dist/pipeline.js"() {
     "use strict";
     init_rules();
     PolicyPipeline = class {
@@ -40208,9 +40210,9 @@ var init_pipeline2 = __esm({
   }
 });
 
-// ../qmd-team-intent-kb/packages/policy-engine/dist/index.js
+// ../../../home/jeremy/000-projects/qmd-team-intent-kb/packages/policy-engine/dist/index.js
 var init_dist7 = __esm({
-  "../qmd-team-intent-kb/packages/policy-engine/dist/index.js"() {
+  "../../../home/jeremy/000-projects/qmd-team-intent-kb/packages/policy-engine/dist/index.js"() {
     "use strict";
     init_rules();
     init_secret_detection_rule();
@@ -40225,7 +40227,7 @@ var init_dist7 = __esm({
   }
 });
 
-// ../qmd-team-intent-kb/apps/curator/dist/dedup/dedup-checker.js
+// ../../../home/jeremy/000-projects/qmd-team-intent-kb/apps/curator/dist/dedup/dedup-checker.js
 function checkDuplicate(candidate, memoryRepo) {
   const contentHash = computeContentHash(candidate.content);
   const existing = memoryRepo.findByContentHash(contentHash);
@@ -40240,13 +40242,13 @@ function checkDuplicate(candidate, memoryRepo) {
   return { isDuplicate: false, contentHash };
 }
 var init_dedup_checker = __esm({
-  "../qmd-team-intent-kb/apps/curator/dist/dedup/dedup-checker.js"() {
+  "../../../home/jeremy/000-projects/qmd-team-intent-kb/apps/curator/dist/dedup/dedup-checker.js"() {
     "use strict";
     init_dist2();
   }
 });
 
-// ../qmd-team-intent-kb/apps/curator/dist/supersession/supersession-detector.js
+// ../../../home/jeremy/000-projects/qmd-team-intent-kb/apps/curator/dist/supersession/supersession-detector.js
 function detectSupersession(candidate, memoryRepo, threshold = 0.6) {
   const existingMemories = memoryRepo.findByTenantAndLifecycle(candidate.tenantId, "active").filter((m) => m.category === candidate.category);
   let bestMatch = null;
@@ -40281,12 +40283,12 @@ function tokenize(text) {
   return text.toLowerCase().split(/\s+/).filter((t) => t.length > 0);
 }
 var init_supersession_detector = __esm({
-  "../qmd-team-intent-kb/apps/curator/dist/supersession/supersession-detector.js"() {
+  "../../../home/jeremy/000-projects/qmd-team-intent-kb/apps/curator/dist/supersession/supersession-detector.js"() {
     "use strict";
   }
 });
 
-// ../qmd-team-intent-kb/apps/curator/dist/import/wikilink-parser.js
+// ../../../home/jeremy/000-projects/qmd-team-intent-kb/apps/curator/dist/import/wikilink-parser.js
 function extractWikiLinks(content) {
   const codeRanges = findCodeRanges(content);
   const links = [];
@@ -40337,13 +40339,13 @@ function isInsideCodeRange(start, end, ranges) {
 }
 var WIKILINK_RE;
 var init_wikilink_parser = __esm({
-  "../qmd-team-intent-kb/apps/curator/dist/import/wikilink-parser.js"() {
+  "../../../home/jeremy/000-projects/qmd-team-intent-kb/apps/curator/dist/import/wikilink-parser.js"() {
     "use strict";
     WIKILINK_RE = /\[\[([^\[\]|][^\[\]|]*?)(?:\|([^\[\]]*))?\]\]/g;
   }
 });
 
-// ../qmd-team-intent-kb/apps/curator/dist/promotion/promoter.js
+// ../../../home/jeremy/000-projects/qmd-team-intent-kb/apps/curator/dist/promotion/promoter.js
 function promote(input, memoryRepo, auditRepo, dryRun = false, linksRepo, evalCallback, now = (/* @__PURE__ */ new Date()).toISOString()) {
   const memoryId = deriveMemoryId(input.candidate.id, input.contentHash);
   const policyEvaluations = input.pipelineResult.evaluations.map((ev, index) => ({
@@ -40492,7 +40494,7 @@ function promote(input, memoryRepo, auditRepo, dryRun = false, linksRepo, evalCa
   return memory;
 }
 var init_promoter = __esm({
-  "../qmd-team-intent-kb/apps/curator/dist/promotion/promoter.js"() {
+  "../../../home/jeremy/000-projects/qmd-team-intent-kb/apps/curator/dist/promotion/promoter.js"() {
     "use strict";
     init_dist2();
     init_dist();
@@ -40500,7 +40502,7 @@ var init_promoter = __esm({
   }
 });
 
-// ../qmd-team-intent-kb/apps/curator/dist/rejection/rejector.js
+// ../../../home/jeremy/000-projects/qmd-team-intent-kb/apps/curator/dist/rejection/rejector.js
 function reject(candidate, pipelineResult, auditRepo, dryRun = false) {
   const reason = pipelineResult.rejectedBy !== void 0 ? `Rejected by rule: ${pipelineResult.rejectedBy}` : `Flagged by rules: ${pipelineResult.flaggedBy?.join(", ") ?? "unknown"}`;
   if (!dryRun) {
@@ -40523,17 +40525,17 @@ function reject(candidate, pipelineResult, auditRepo, dryRun = false) {
 }
 var import_node_crypto8;
 var init_rejector = __esm({
-  "../qmd-team-intent-kb/apps/curator/dist/rejection/rejector.js"() {
+  "../../../home/jeremy/000-projects/qmd-team-intent-kb/apps/curator/dist/rejection/rejector.js"() {
     "use strict";
     import_node_crypto8 = require("node:crypto");
     init_dist();
   }
 });
 
-// ../qmd-team-intent-kb/apps/curator/dist/curator.js
+// ../../../home/jeremy/000-projects/qmd-team-intent-kb/apps/curator/dist/curator.js
 var Curator;
 var init_curator = __esm({
-  "../qmd-team-intent-kb/apps/curator/dist/curator.js"() {
+  "../../../home/jeremy/000-projects/qmd-team-intent-kb/apps/curator/dist/curator.js"() {
     "use strict";
     init_dist2();
     init_dist7();
@@ -40670,7 +40672,7 @@ var init_curator = __esm({
   }
 });
 
-// ../qmd-team-intent-kb/apps/curator/dist/intake/spool-intake.js
+// ../../../home/jeremy/000-projects/qmd-team-intent-kb/apps/curator/dist/intake/spool-intake.js
 async function ingestFromSpool(candidateRepo, spoolDir, opts) {
   const detailed = await ingestFromSpoolDetailed(candidateRepo, spoolDir, opts);
   if (!detailed.ok)
@@ -40749,7 +40751,7 @@ async function quarantineTamperedFile(spoolFilePath, spoolDir, quarantineDirOver
 }
 var import_promises3, import_node_path9;
 var init_spool_intake = __esm({
-  "../qmd-team-intent-kb/apps/curator/dist/intake/spool-intake.js"() {
+  "../../../home/jeremy/000-projects/qmd-team-intent-kb/apps/curator/dist/intake/spool-intake.js"() {
     "use strict";
     import_promises3 = require("node:fs/promises");
     import_node_path9 = require("node:path");
@@ -40758,10 +40760,10 @@ var init_spool_intake = __esm({
   }
 });
 
-// ../qmd-team-intent-kb/apps/curator/dist/merge/merge-gate.js
+// ../../../home/jeremy/000-projects/qmd-team-intent-kb/apps/curator/dist/merge/merge-gate.js
 var MERGE_EPOCH_MS;
 var init_merge_gate = __esm({
-  "../qmd-team-intent-kb/apps/curator/dist/merge/merge-gate.js"() {
+  "../../../home/jeremy/000-projects/qmd-team-intent-kb/apps/curator/dist/merge/merge-gate.js"() {
     "use strict";
     init_dist2();
     init_dist7();
@@ -40771,31 +40773,31 @@ var init_merge_gate = __esm({
   }
 });
 
-// ../qmd-team-intent-kb/apps/curator/dist/import/markdown-parser.js
+// ../../../home/jeremy/000-projects/qmd-team-intent-kb/apps/curator/dist/import/markdown-parser.js
 var init_markdown_parser = __esm({
-  "../qmd-team-intent-kb/apps/curator/dist/import/markdown-parser.js"() {
+  "../../../home/jeremy/000-projects/qmd-team-intent-kb/apps/curator/dist/import/markdown-parser.js"() {
     "use strict";
   }
 });
 
-// ../qmd-team-intent-kb/apps/curator/dist/import/vault-walker.js
+// ../../../home/jeremy/000-projects/qmd-team-intent-kb/apps/curator/dist/import/vault-walker.js
 var init_vault_walker = __esm({
-  "../qmd-team-intent-kb/apps/curator/dist/import/vault-walker.js"() {
+  "../../../home/jeremy/000-projects/qmd-team-intent-kb/apps/curator/dist/import/vault-walker.js"() {
     "use strict";
   }
 });
 
-// ../qmd-team-intent-kb/apps/curator/dist/import/collision-detector.js
+// ../../../home/jeremy/000-projects/qmd-team-intent-kb/apps/curator/dist/import/collision-detector.js
 var init_collision_detector = __esm({
-  "../qmd-team-intent-kb/apps/curator/dist/import/collision-detector.js"() {
+  "../../../home/jeremy/000-projects/qmd-team-intent-kb/apps/curator/dist/import/collision-detector.js"() {
     "use strict";
     init_dist2();
   }
 });
 
-// ../qmd-team-intent-kb/apps/curator/dist/import/import-pipeline.js
+// ../../../home/jeremy/000-projects/qmd-team-intent-kb/apps/curator/dist/import/import-pipeline.js
 var init_import_pipeline = __esm({
-  "../qmd-team-intent-kb/apps/curator/dist/import/import-pipeline.js"() {
+  "../../../home/jeremy/000-projects/qmd-team-intent-kb/apps/curator/dist/import/import-pipeline.js"() {
     "use strict";
     init_dist2();
     init_vault_walker();
@@ -40804,9 +40806,9 @@ var init_import_pipeline = __esm({
   }
 });
 
-// ../qmd-team-intent-kb/apps/curator/dist/import/index.js
+// ../../../home/jeremy/000-projects/qmd-team-intent-kb/apps/curator/dist/import/index.js
 var init_import = __esm({
-  "../qmd-team-intent-kb/apps/curator/dist/import/index.js"() {
+  "../../../home/jeremy/000-projects/qmd-team-intent-kb/apps/curator/dist/import/index.js"() {
     "use strict";
     init_markdown_parser();
     init_vault_walker();
@@ -40816,9 +40818,9 @@ var init_import = __esm({
   }
 });
 
-// ../qmd-team-intent-kb/apps/curator/dist/index.js
+// ../../../home/jeremy/000-projects/qmd-team-intent-kb/apps/curator/dist/index.js
 var init_dist8 = __esm({
-  "../qmd-team-intent-kb/apps/curator/dist/index.js"() {
+  "../../../home/jeremy/000-projects/qmd-team-intent-kb/apps/curator/dist/index.js"() {
     "use strict";
     init_curator();
     init_spool_intake();
@@ -40832,7 +40834,7 @@ var init_dist8 = __esm({
   }
 });
 
-// ../qmd-team-intent-kb/apps/git-exporter/dist/formatter/frontmatter.js
+// ../../../home/jeremy/000-projects/qmd-team-intent-kb/apps/git-exporter/dist/formatter/frontmatter.js
 function extractFrontmatter(memory) {
   return {
     id: memory.id,
@@ -40883,12 +40885,12 @@ function escapeYamlString(s) {
   return s.replace(/\\/g, "\\\\").replace(/"/g, '\\"');
 }
 var init_frontmatter = __esm({
-  "../qmd-team-intent-kb/apps/git-exporter/dist/formatter/frontmatter.js"() {
+  "../../../home/jeremy/000-projects/qmd-team-intent-kb/apps/git-exporter/dist/formatter/frontmatter.js"() {
     "use strict";
   }
 });
 
-// ../qmd-team-intent-kb/apps/git-exporter/dist/formatter/markdown-formatter.js
+// ../../../home/jeremy/000-projects/qmd-team-intent-kb/apps/git-exporter/dist/formatter/markdown-formatter.js
 function formatMemoryAsMarkdown(memory, resolveLinks) {
   const frontmatter = renderFrontmatter(extractFrontmatter(memory));
   const content = resolveLinks ? resolveLinks(memory.content) : memory.content;
@@ -40900,13 +40902,13 @@ ${content}
 `;
 }
 var init_markdown_formatter = __esm({
-  "../qmd-team-intent-kb/apps/git-exporter/dist/formatter/markdown-formatter.js"() {
+  "../../../home/jeremy/000-projects/qmd-team-intent-kb/apps/git-exporter/dist/formatter/markdown-formatter.js"() {
     "use strict";
     init_frontmatter();
   }
 });
 
-// ../qmd-team-intent-kb/apps/git-exporter/dist/formatter/directory-mapper.js
+// ../../../home/jeremy/000-projects/qmd-team-intent-kb/apps/git-exporter/dist/formatter/directory-mapper.js
 function getDirectory(memory) {
   if (memory.lifecycle === "archived" || memory.lifecycle === "superseded") {
     return "archive";
@@ -40933,12 +40935,12 @@ function getRelativePath2(memory) {
   return `${getDirectory(memory)}/${memory.id}.md`;
 }
 var init_directory_mapper = __esm({
-  "../qmd-team-intent-kb/apps/git-exporter/dist/formatter/directory-mapper.js"() {
+  "../../../home/jeremy/000-projects/qmd-team-intent-kb/apps/git-exporter/dist/formatter/directory-mapper.js"() {
     "use strict";
   }
 });
 
-// ../qmd-team-intent-kb/apps/git-exporter/dist/diff/change-detector.js
+// ../../../home/jeremy/000-projects/qmd-team-intent-kb/apps/git-exporter/dist/diff/change-detector.js
 function detectChanges(memoryRepo, exportStateRepo, config2) {
   const exportState = exportStateRepo.get(config2.targetId);
   let memories;
@@ -40971,14 +40973,14 @@ function detectChanges(memoryRepo, exportStateRepo, config2) {
 }
 var import_node_path10;
 var init_change_detector = __esm({
-  "../qmd-team-intent-kb/apps/git-exporter/dist/diff/change-detector.js"() {
+  "../../../home/jeremy/000-projects/qmd-team-intent-kb/apps/git-exporter/dist/diff/change-detector.js"() {
     "use strict";
     init_directory_mapper();
     import_node_path10 = require("node:path");
   }
 });
 
-// ../qmd-team-intent-kb/apps/git-exporter/dist/writer/file-writer.js
+// ../../../home/jeremy/000-projects/qmd-team-intent-kb/apps/git-exporter/dist/writer/file-writer.js
 function assertPathSafe(filePath, allowedRoot) {
   if (filePath.includes("\0")) {
     throw new Error("Unsafe file path: Path contains null byte");
@@ -41023,14 +41025,14 @@ function removeFile(filePath, exportRoot) {
 }
 var import_node_fs5, import_node_path11;
 var init_file_writer = __esm({
-  "../qmd-team-intent-kb/apps/git-exporter/dist/writer/file-writer.js"() {
+  "../../../home/jeremy/000-projects/qmd-team-intent-kb/apps/git-exporter/dist/writer/file-writer.js"() {
     "use strict";
     import_node_fs5 = require("node:fs");
     import_node_path11 = require("node:path");
   }
 });
 
-// ../qmd-team-intent-kb/apps/git-exporter/dist/exporter.js
+// ../../../home/jeremy/000-projects/qmd-team-intent-kb/apps/git-exporter/dist/exporter.js
 function isSensitivityRestricted(level) {
   const idx = Sensitivity.options.indexOf(level);
   return idx >= CONFIDENTIAL_INDEX;
@@ -41084,7 +41086,7 @@ function runExport(memoryRepo, exportStateRepo, config2, nowFn = () => (/* @__PU
 }
 var import_node_fs6, CONFIDENTIAL_INDEX;
 var init_exporter = __esm({
-  "../qmd-team-intent-kb/apps/git-exporter/dist/exporter.js"() {
+  "../../../home/jeremy/000-projects/qmd-team-intent-kb/apps/git-exporter/dist/exporter.js"() {
     "use strict";
     init_dist();
     init_change_detector();
@@ -41095,18 +41097,18 @@ var init_exporter = __esm({
   }
 });
 
-// ../qmd-team-intent-kb/apps/git-exporter/dist/cli.js
+// ../../../home/jeremy/000-projects/qmd-team-intent-kb/apps/git-exporter/dist/cli.js
 var init_cli = __esm({
-  "../qmd-team-intent-kb/apps/git-exporter/dist/cli.js"() {
+  "../../../home/jeremy/000-projects/qmd-team-intent-kb/apps/git-exporter/dist/cli.js"() {
     "use strict";
     init_dist3();
     init_exporter();
   }
 });
 
-// ../qmd-team-intent-kb/apps/git-exporter/dist/index.js
+// ../../../home/jeremy/000-projects/qmd-team-intent-kb/apps/git-exporter/dist/index.js
 var init_dist9 = __esm({
-  "../qmd-team-intent-kb/apps/git-exporter/dist/index.js"() {
+  "../../../home/jeremy/000-projects/qmd-team-intent-kb/apps/git-exporter/dist/index.js"() {
     "use strict";
     init_frontmatter();
     init_markdown_formatter();
@@ -41216,8 +41218,84 @@ var init_anchor = __esm({
   }
 });
 
+// src/write-lock.ts
+function tryFlockExclusive(fd) {
+  return new Promise((resolve3) => {
+    (0, import_fs_ext.flock)(fd, "exnb", (err2) => resolve3(err2 ?? null));
+  });
+}
+function isContention(err2) {
+  return err2.code === "EAGAIN" || err2.code === "EWOULDBLOCK";
+}
+async function acquireWriteLock(basePath, timeoutMs = DEFAULT_TIMEOUT_MS) {
+  (0, import_node_fs8.mkdirSync)(basePath, { recursive: true });
+  const lockPath = (0, import_node_path13.join)(basePath, LOCK_FILENAME);
+  const fd = (0, import_node_fs8.openSync)(lockPath, "a");
+  const deadline = Date.now() + Math.max(0, timeoutMs);
+  for (; ; ) {
+    const err2 = await tryFlockExclusive(fd);
+    if (!err2) {
+      return {
+        release() {
+          try {
+            (0, import_fs_ext.flockSync)(fd, "un");
+          } catch {
+          } finally {
+            try {
+              (0, import_node_fs8.closeSync)(fd);
+            } catch {
+            }
+          }
+        }
+      };
+    }
+    if (!isContention(err2)) {
+      try {
+        (0, import_node_fs8.closeSync)(fd);
+      } catch {
+      }
+      throw err2;
+    }
+    if (Date.now() >= deadline) {
+      try {
+        (0, import_node_fs8.closeSync)(fd);
+      } catch {
+      }
+      throw new WriteLockBusyError();
+    }
+    await sleep(RETRY_INTERVAL_MS);
+  }
+}
+var import_node_fs8, import_node_path13, import_fs_ext, LOCK_FILENAME, DEFAULT_TIMEOUT_MS, RETRY_INTERVAL_MS, WriteLockBusyError, sleep;
+var init_write_lock = __esm({
+  "src/write-lock.ts"() {
+    "use strict";
+    import_node_fs8 = require("node:fs");
+    import_node_path13 = require("node:path");
+    import_fs_ext = require("fs-ext");
+    LOCK_FILENAME = ".write.lock";
+    DEFAULT_TIMEOUT_MS = 8e3;
+    RETRY_INTERVAL_MS = 100;
+    WriteLockBusyError = class extends Error {
+      constructor(message = "brain busy \u2014 another write in progress, retry") {
+        super(message);
+        this.name = "WriteLockBusyError";
+      }
+    };
+    sleep = (ms) => new Promise((resolve3) => setTimeout(resolve3, ms));
+  }
+});
+
 // src/govern.ts
 async function runGovern(config2) {
+  const lock = await acquireWriteLock(config2.basePath);
+  try {
+    return await runGovernLocked(config2);
+  } finally {
+    lock.release();
+  }
+}
+async function runGovernLocked(config2) {
   const db = createDatabase({ path: config2.dbPath });
   try {
     const candidateRepo = new CandidateRepository(db);
@@ -41302,6 +41380,7 @@ var init_govern = __esm({
     init_dist4();
     init_seed_policy();
     init_anchor();
+    init_write_lock();
   }
 });
 
@@ -41320,11 +41399,11 @@ function isMissingNativeDep(e) {
   );
 }
 function manifestPath(basePath) {
-  return (0, import_node_path13.join)(basePath, "audit", "exceptions.manifest.json");
+  return (0, import_node_path14.join)(basePath, "audit", "exceptions.manifest.json");
 }
 function loadExceptionManifest(basePath) {
   const p = manifestPath(basePath);
-  if (!(0, import_node_fs8.existsSync)(p)) return null;
+  if (!(0, import_node_fs9.existsSync)(p)) return null;
   try {
     return readManifest(p);
   } catch (e) {
@@ -41374,16 +41453,16 @@ async function startLocalServer() {
 `
   );
 }
-var import_node_crypto10, import_node_fs8, import_zod18, import_node_path13, VERSION2, config, CATEGORIES2, NATIVE_DEP_HINT, server2;
+var import_node_crypto10, import_node_fs9, import_zod18, import_node_path14, VERSION2, config, CATEGORIES2, NATIVE_DEP_HINT, server2;
 var init_local_server = __esm({
   "src/local-server.ts"() {
     "use strict";
     import_node_crypto10 = require("node:crypto");
-    import_node_fs8 = require("node:fs");
+    import_node_fs9 = require("node:fs");
     init_mcp();
     init_stdio2();
     import_zod18 = __toESM(require_zod(), 1);
-    import_node_path13 = require("node:path");
+    import_node_path14 = require("node:path");
     init_dist3();
     init_dist4();
     init_dist6();
@@ -41391,6 +41470,7 @@ var init_local_server = __esm({
     init_config3();
     init_govern();
     init_anchor();
+    init_write_lock();
     VERSION2 = "1.0.0";
     config = resolveConfig();
     CATEGORIES2 = [
@@ -41483,7 +41563,7 @@ var init_local_server = __esm({
         }
         try {
           const auditRepo = new AuditRepository(db);
-          const result = verifyAnchors(auditRepo, (0, import_node_path13.join)(config.basePath, "audit", "anchors.jsonl"));
+          const result = verifyAnchors(auditRepo, (0, import_node_path14.join)(config.basePath, "audit", "anchors.jsonl"));
           const manifest = loadExceptionManifest(config.basePath);
           const rowsById = buildRowsById(auditRepo);
           const classified = classifyChainBreaks(result.chain.breaks, manifest, rowsById);
@@ -41562,6 +41642,7 @@ var init_local_server = __esm({
         try {
           s = await runGovern(config);
         } catch (e) {
+          if (e instanceof WriteLockBusyError) return jsonResult2({ ok: false, error: e.message });
           if (isMissingNativeDep(e)) return jsonResult2({ ok: false, error: "native-store-unavailable", message: NATIVE_DEP_HINT });
           throw e;
         }
@@ -41589,66 +41670,83 @@ var init_local_server = __esm({
         supersededBy: import_zod18.z.string().uuid().optional().describe('Required UUID when transitioning to "superseded"')
       },
       async (params) => {
-        let db;
+        let lock;
         try {
-          db = createDatabase({ path: config.dbPath });
+          lock = await acquireWriteLock(config.basePath);
         } catch (e) {
-          if (isMissingNativeDep(e)) return jsonResult2({ ok: false, error: "native-store-unavailable", message: NATIVE_DEP_HINT });
+          if (e instanceof WriteLockBusyError) return jsonResult2({ ok: false, error: e.message });
           throw e;
         }
         try {
-          const memoryRepo = new MemoryRepository(db);
-          const auditRepo = new AuditRepository(db);
-          const memory = memoryRepo.findById(params.memoryId);
-          if (!memory) {
-            return jsonResult2({ ok: false, error: `No memory found with id ${params.memoryId}` });
+          let db;
+          try {
+            db = createDatabase({ path: config.dbPath });
+          } catch (e) {
+            if (isMissingNativeDep(e)) return jsonResult2({ ok: false, error: "native-store-unavailable", message: NATIVE_DEP_HINT });
+            throw e;
           }
-          const actor = { type: "human", id: params.actor ?? "owner" };
-          const validation = validateTransition(memory.lifecycle, params.to, {
-            reason: params.reason,
-            actor,
-            supersededBy: params.supersededBy
-          });
-          if (!validation.valid) {
-            return jsonResult2({ ok: false, error: validation.error });
-          }
-          const now = (/* @__PURE__ */ new Date()).toISOString();
-          const action = params.to === "archived" ? "archived" : params.to === "superseded" ? "superseded" : "demoted";
-          db.transaction(() => {
-            memoryRepo.updateLifecycle(params.memoryId, params.to, now);
-            auditRepo.insert({
-              id: (0, import_node_crypto10.randomUUID)(),
-              action,
-              memoryId: params.memoryId,
-              tenantId: memory.tenantId,
-              actor,
+          try {
+            const memoryRepo = new MemoryRepository(db);
+            const auditRepo = new AuditRepository(db);
+            const memory = memoryRepo.findById(params.memoryId);
+            if (!memory) {
+              return jsonResult2({ ok: false, error: `No memory found with id ${params.memoryId}` });
+            }
+            const actor = { type: "human", id: params.actor ?? "owner" };
+            const validation = validateTransition(memory.lifecycle, params.to, {
               reason: params.reason,
-              details: { from: memory.lifecycle, to: params.to },
-              timestamp: now
+              actor,
+              supersededBy: params.supersededBy
             });
-          })();
-          const anchored = anchorChainHead(auditRepo, config.basePath, config.tenantId);
-          return jsonResult2({
-            ok: true,
-            memoryId: params.memoryId,
-            from: memory.lifecycle,
-            to: params.to,
-            anchored,
-            message: anchored ? "Transition applied; hash-chained audit event written and chain head re-anchored." : "Transition applied; hash-chained audit event written. (External anchor skipped \u2014 best-effort; the durable write is unaffected.)"
-          });
+            if (!validation.valid) {
+              return jsonResult2({ ok: false, error: validation.error });
+            }
+            const now = (/* @__PURE__ */ new Date()).toISOString();
+            const action = params.to === "archived" ? "archived" : params.to === "superseded" ? "superseded" : "demoted";
+            db.transaction(() => {
+              memoryRepo.updateLifecycle(params.memoryId, params.to, now);
+              auditRepo.insert({
+                id: (0, import_node_crypto10.randomUUID)(),
+                action,
+                memoryId: params.memoryId,
+                tenantId: memory.tenantId,
+                actor,
+                reason: params.reason,
+                details: { from: memory.lifecycle, to: params.to },
+                timestamp: now
+              });
+            })();
+            const anchored = anchorChainHead(auditRepo, config.basePath, config.tenantId);
+            return jsonResult2({
+              ok: true,
+              memoryId: params.memoryId,
+              from: memory.lifecycle,
+              to: params.to,
+              anchored,
+              message: anchored ? "Transition applied; hash-chained audit event written and chain head re-anchored." : "Transition applied; hash-chained audit event written. (External anchor skipped \u2014 best-effort; the durable write is unaffected.)"
+            });
+          } finally {
+            db.close();
+          }
         } finally {
-          db.close();
+          lock.release();
         }
       }
     );
   }
 });
 
+// src/mode.ts
+function resolveMode(rawTeamkbApiUrl) {
+  const raw = rawTeamkbApiUrl?.trim();
+  const apiUrl = raw !== void 0 && raw !== "" && !raw.startsWith("${") ? raw : void 0;
+  return apiUrl !== void 0 ? { mode: "team", apiUrl } : { mode: "local" };
+}
+
 // src/index.ts
 async function main() {
-  const raw = process.env["TEAMKB_API_URL"]?.trim();
-  const apiUrl = raw !== void 0 && raw !== "" && !raw.startsWith("${") ? raw : void 0;
-  if (apiUrl !== void 0) {
+  const { mode } = resolveMode(process.env["TEAMKB_API_URL"]);
+  if (mode === "team") {
     const { startRemoteServer: startRemoteServer2 } = await Promise.resolve().then(() => (init_remote_server(), remote_server_exports));
     await startRemoteServer2();
   } else {

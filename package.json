@@ -53,12 +53,14 @@
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.29.0",
     "better-sqlite3": "^12.10.0",
+    "fs-ext": "^2.1.1",
     "zod": "^4.4.3"
   },
   "pnpm": {
     "onlyBuiltDependencies": [
       "better-sqlite3",
-      "esbuild"
+      "esbuild",
+      "fs-ext"
     ]
   },
   "devDependencies": {
@@ -72,6 +74,7 @@
     "@qmd-team-intent-kb/schema": "link:../qmd-team-intent-kb/packages/schema",
     "@qmd-team-intent-kb/store": "link:../qmd-team-intent-kb/packages/store",
     "@types/better-sqlite3": "^7.6.11",
+    "@types/fs-ext": "^2.0.3",
     "@types/node": "^22.10.0",
     "@vitest/coverage-v8": "^4.1.10",
     "esbuild": "^0.28.1",

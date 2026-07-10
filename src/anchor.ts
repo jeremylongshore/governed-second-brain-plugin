@@ -76,6 +76,13 @@ function commitAnchor(auditDir: string): boolean {
  * commit) it returns `undefined`; the caller keeps its own write and surfaces the
  * absent anchor honestly. `committed` may be `true` while unpushed (no remote) —
  * that is a local-only witness, not external tamper-evidence (see AnchorResult).
+ *
+ * Concurrency: this does NOT take the brain write lock itself — its ONLY callers
+ * (`runGovern` and the `brain_transition` handler) already hold the exclusive
+ * flock(2) lock on `<base>/.write.lock` for the whole write, so the anchor append
+ * is already serialized against concurrent govern/transition AND the cron
+ * backup/compile. Re-locking here (a second fd requesting LOCK_EX on the same
+ * file) would deadlock against the caller's own lock, so it must not.
  */
 export function anchorChainHead(
   auditRepo: AuditRepository,

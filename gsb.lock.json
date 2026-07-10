@@ -35,7 +35,10 @@
   },
   "runtime": {
     "node": ">=20",
-    "nativeDependency": { "name": "better-sqlite3", "acceptedRange": "^12.10.0" }
+    "nativeDependencies": [
+      { "name": "better-sqlite3", "acceptedRange": "^12.10.0", "role": "local store (SQLite) — externalized from the bundle, native-built by the installer" },
+      { "name": "fs-ext", "acceptedRange": "^2.1.1", "role": "flock(2) wrapper for the local-mode write lock — serializes ~/.teamkb writes against the cron's /usr/bin/flock (R9). Externalized from the bundle, native-built by the installer." }
+    ]
   },
   "verifiedBy": ".github/workflows/smoke.yml — capture -> govern -> audit-verify (hermetic, zero LLM egress) + best-effort qmd-cited search."
 }
