@@ -1,0 +1,67 @@
+{
+  "strictness": 3,
+  "commentTypes": ["logic", "syntax"],
+  "triggerOnUpdates": true,
+  "fixWithAI": true,
+  "confidenceScoreSection": { "included": true },
+  "sequenceDiagramSection": { "included": true },
+  "ignorePatterns": "node_modules/\ndist/\nbuild/\ncoverage/\n*.min.js\n*.map\n*.tsbuildinfo\npnpm-lock.yaml\npackage-lock.json\nplugin-runtime/*.cjs\nplugin-runtime/node_modules/\n.beads/",
+  "rules": [
+    {
+      "id": "local-team-dispatch",
+      "severity": "high",
+      "scope": ["src/index.ts", "src/mode.ts"],
+      "rule": "ONE plugin, two runtime modes dispatched at startup by `TEAMKB_API_URL` (resolved in `src/mode.ts`). Unset / empty / whitespace-only / an unexpanded `${...}` shell placeholder -> LOCAL (in-process ~/.teamkb, full brain_* surface); any other non-empty value -> TEAM (remote proxy to the one shared brain). The `${...}` guard is load-bearing: without it a literal \"${TEAMKB_API_URL}\" is treated as a real URL and a misconfigured host silently runs the WRONG brain. Flag any change that removes the empty / placeholder guards, makes the dispatch ambiguous, or eagerly loads both modes (only the selected mode must load)."
+    },
+    {
+      "id": "team-mode-dependency-free-and-errors-surface",
+      "severity": "high",
+      "scope": ["src/remote-server.ts"],
+      "rule": "Team mode is DEPENDENCY-FREE: import ONLY `node:crypto`, `fetch`, `zod`, and the MCP SDK — NEVER `@qmd-team-intent-kb/*` or anything that pulls `better-sqlite3`. The team bundle must run from a marketplace clone with zero build. And team-mode errors must SURFACE to the caller (`ok:false` + a message) — never a silent `count:0` / empty result that masks an auth or network failure as 'no hits'. Flag a heavy/native import added to remote-server, and any error path swallowed into an empty success."
+    },
+    {
+      "id": "local-writers-fail-closed-under-lock",
+      "severity": "high",
+      "scope": ["src/**"],
+      "rule": "Local-mode writers (`brain_capture` / `brain_govern` / `brain_transition`) take the `~/.teamkb/.write.lock` via flock(2), which MUST interoperate with the nightly compile cron's `/usr/bin/flock` on the same lock file (advisory lock, same path). Writers fail CLOSED on any lock error — never proceed unlocked. Flag any change that drops the lock, moves the lock path so it no longer interoperates with the cron, or lets a writer continue when the lock cannot be acquired."
+    },
+    {
+      "id": "generated-cjs-bundle",
+      "severity": "high",
+      "scope": ["plugin-runtime/governed-brain.cjs", "build.mjs", "package.json"],
+      "rule": "`plugin-runtime/governed-brain.cjs` is a GENERATED single-file bundle produced by `build.mjs` from `src/`. Never hand-edit it, and never suggest editing it directly to change behavior. Any `src/**` change must be followed by a rebuild + commit of the bundle, and the `gsb.lock.json` version tuple stays consistent (smoke/check-lock.mjs enforces plugin/package/marketplace/.mcp version agreement). Flag a src change with no corresponding bundle rebuild."
+    },
+    {
+      "id": "candidates-and-govern-source-of-truth",
+      "severity": "high",
+      "scope": ["src/govern.ts"],
+      "rule": "In local mode the plugin runs the govern -> retrieve loop in-process; the `candidates` table is insert-only Tier-A source of truth (005-AT-ARCH), and the govern pipeline stays deterministic (no LLM call below the spool). Never make govern.ts destructively delete candidates or retire flagged/rejected captures with a hard delete — retirement is marker-based; keep flagged/rejected rows for admin review. The model proposes (capture); deterministic govern disposes."
+    },
+    {
+      "id": "receipts-append-only-never-rehash",
+      "severity": "high",
+      "scope": ["src/anchor.ts", "src/**"],
+      "rule": "The audit chain is append-only + SHA-256 hash-chained. NEVER suggest re-hashing the chain, editing past events, or 'fixing' the 155 carried CHAIN_FORK breaks by re-hashing (ratified D5 — benign same-timestamp ordering, all hashes intact). `brain_audit_verify` reports an honest 3-state banner: ok:true with N benign forks is NOT tamper; ok:false IS real tamper — investigate, never migrate. Do not resurrect the old false 'TAMPER DETECTED' klaxon."
+    },
+    {
+      "id": "no-plaintext-secrets",
+      "severity": "high",
+      "rule": "No plaintext bearer token, API key, or secret in any committed file — including 'for testing'. Team mode reads its per-user token from env / config at runtime, never hardcoded; never log a token. The remote brain's tokens are scrypt-hashed at rest server-side — the plugin never stores or echoes a plaintext secret."
+    },
+    {
+      "id": "no-gate-weakening",
+      "severity": "high",
+      "rule": "The required CI checks are the merge gate: `smoke.yml` (full-chain zero-egress smoke + `check-lock.mjs` version-drift guard) plus the vitest + eslint + typecheck job. Never suggest weakening a smoke assertion, disabling eslint/typecheck, deleting a test, or loosening the lock guard — unless the same PR ships a strictly stronger equivalent."
+    },
+    {
+      "id": "honesty-invariants",
+      "severity": "high",
+      "rule": "NEVER introduce or accept the words tamper-proof / immutable / non-repudiation (for local mode) / blockchain as product claims — in code, comments, tool descriptions, or docs (see this repo's CLAUDE.md/AGENTS.md audit-honesty rule). The chain is tamper-EVIDENT only: integrity + ordering + rewrite-detection. Keep 'tamper-evident'. Flag any diff that softens the honesty framing or overclaims what a receipt proves."
+    },
+    {
+      "id": "commit-pr-standard",
+      "severity": "medium",
+      "rule": "PRs follow 013-OD-STND: What / Why + decision rationale / Layer(s) touched (compile / spool / govern / receipts / plugin surface) + any invariant changed / Verification & evidence (linked artifact) / Risk / Operational impact / Follow-up / Refs. Flag a non-trivial PR missing the Layer(s)-touched declaration or the evidence link, and any bare `fix`/`update` subject."
+    }
+  ]
+}

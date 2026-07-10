@@ -1,0 +1,40 @@
+{
+  "files": [
+    {
+      "path": "AGENTS.md",
+      "description": "The single source of truth for this repo: the local|team dual-mode dispatch, the team-mode dependency-free server contract, govern.ts / seed-policy.ts, build + smokes, the tenant-default gotcha, and the retrieval roadmap. Read first."
+    },
+    {
+      "path": "CLAUDE.md",
+      "description": "The two load-bearing rules repeated for agents: (1) team mode (remote-server.ts) is dependency-free — only node:crypto/fetch/zod/MCP SDK; (2) audit honesty — tamper-evident, not tamper-proof; forbidden words. Rebuild the .cjs on any src change."
+    },
+    {
+      "path": "src/index.ts",
+      "description": "The entry point / dispatcher — decides LOCAL vs TEAM at startup and dynamic-imports only the selected mode so the unused one never loads."
+    },
+    {
+      "path": "src/mode.ts",
+      "description": "The pure, unit-tested local-vs-team dispatch predicate: team iff TEAMKB_API_URL is genuinely set; unset/empty/whitespace/unexpanded ${...} placeholder -> local. The ${...} guard prevents silently running the wrong brain."
+    },
+    {
+      "path": "src/remote-server.ts",
+      "description": "TEAM mode: the dependency-free remote proxy to the one shared brain over the tailnet. Must import only node:crypto/fetch/zod/MCP SDK, and must SURFACE errors (ok:false) rather than return a silent empty result."
+    },
+    {
+      "path": "src/local-server.ts",
+      "description": "LOCAL mode: the in-process, daemon-free stdio MCP server over ~/.teamkb, exposing the full brain_* surface (read: brain_search/brain_status/brain_audit_verify; write: brain_capture/brain_govern/brain_transition)."
+    },
+    {
+      "path": "src/govern.ts",
+      "description": "The in-process govern loop for local-mode writes. candidates is insert-only source of truth; govern stays deterministic (no LLM below the spool); retirement is marker-based, not a destructive delete."
+    },
+    {
+      "path": "build.mjs",
+      "description": "Bundles src/ into the generated single-file plugin-runtime/governed-brain.cjs. That .cjs is generated output — never hand-edit; rebuild + commit it with any src change."
+    },
+    {
+      "path": "smoke/check-lock.mjs",
+      "description": "Version-drift guard: asserts gsb.lock.json stays consistent with package.json / plugin.json / marketplace.json / .mcp.json. A CI failure on drift instead of a silent surprise."
+    }
+  ]
+}
