@@ -517,18 +517,18 @@ var require_parseUtil = __commonJS({
         if (this.value !== "aborted")
           this.value = "aborted";
       }
-      static mergeArray(status, results) {
+      static mergeArray(status2, results) {
         const arrayValue = [];
         for (const s of results) {
           if (s.status === "aborted")
             return exports2.INVALID;
           if (s.status === "dirty")
-            status.dirty();
+            status2.dirty();
           arrayValue.push(s.value);
         }
-        return { status: status.value, value: arrayValue };
+        return { status: status2.value, value: arrayValue };
       }
-      static async mergeObjectAsync(status, pairs) {
+      static async mergeObjectAsync(status2, pairs) {
         const syncPairs = [];
         for (const pair of pairs) {
           const key = await pair.key;
@@ -538,9 +538,9 @@ var require_parseUtil = __commonJS({
             value
           });
         }
-        return _ParseStatus.mergeObjectSync(status, syncPairs);
+        return _ParseStatus.mergeObjectSync(status2, syncPairs);
       }
-      static mergeObjectSync(status, pairs) {
+      static mergeObjectSync(status2, pairs) {
         const finalObject = {};
         for (const pair of pairs) {
           const { key, value } = pair;
@@ -549,14 +549,14 @@ var require_parseUtil = __commonJS({
           if (value.status === "aborted")
             return exports2.INVALID;
           if (key.status === "dirty")
-            status.dirty();
+            status2.dirty();
           if (value.status === "dirty")
-            status.dirty();
+            status2.dirty();
           if (key.value !== "__proto__" && (typeof value.value !== "undefined" || pair.alwaysSet)) {
             finalObject[key.value] = value.value;
           }
         }
-        return { status: status.value, value: finalObject };
+        return { status: status2.value, value: finalObject };
       }
     };
     exports2.ParseStatus = ParseStatus;
@@ -1056,7 +1056,7 @@ var require_types = __commonJS({
           });
           return parseUtil_js_1.INVALID;
         }
-        const status = new parseUtil_js_1.ParseStatus();
+        const status2 = new parseUtil_js_1.ParseStatus();
         let ctx = void 0;
         for (const check of this._def.checks) {
           if (check.kind === "min") {
@@ -1070,7 +1070,7 @@ var require_types = __commonJS({
                 exact: false,
                 message: check.message
               });
-              status.dirty();
+              status2.dirty();
             }
           } else if (check.kind === "max") {
             if (input.data.length > check.value) {
@@ -1083,7 +1083,7 @@ var require_types = __commonJS({
                 exact: false,
                 message: check.message
               });
-              status.dirty();
+              status2.dirty();
             }
           } else if (check.kind === "length") {
             const tooBig = input.data.length > check.value;
@@ -1109,7 +1109,7 @@ var require_types = __commonJS({
                   message: check.message
                 });
               }
-              status.dirty();
+              status2.dirty();
             }
           } else if (check.kind === "email") {
             if (!emailRegex.test(input.data)) {
@@ -1119,7 +1119,7 @@ var require_types = __commonJS({
                 code: ZodError_js_1.ZodIssueCode.invalid_string,
                 message: check.message
               });
-              status.dirty();
+              status2.dirty();
             }
           } else if (check.kind === "emoji") {
             if (!emojiRegex2) {
@@ -1132,7 +1132,7 @@ var require_types = __commonJS({
                 code: ZodError_js_1.ZodIssueCode.invalid_string,
                 message: check.message
               });
-              status.dirty();
+              status2.dirty();
             }
           } else if (check.kind === "uuid") {
             if (!uuidRegex.test(input.data)) {
@@ -1142,7 +1142,7 @@ var require_types = __commonJS({
                 code: ZodError_js_1.ZodIssueCode.invalid_string,
                 message: check.message
               });
-              status.dirty();
+              status2.dirty();
             }
           } else if (check.kind === "nanoid") {
             if (!nanoidRegex.test(input.data)) {
@@ -1152,7 +1152,7 @@ var require_types = __commonJS({
                 code: ZodError_js_1.ZodIssueCode.invalid_string,
                 message: check.message
               });
-              status.dirty();
+              status2.dirty();
             }
           } else if (check.kind === "cuid") {
             if (!cuidRegex.test(input.data)) {
@@ -1162,7 +1162,7 @@ var require_types = __commonJS({
                 code: ZodError_js_1.ZodIssueCode.invalid_string,
                 message: check.message
               });
-              status.dirty();
+              status2.dirty();
             }
           } else if (check.kind === "cuid2") {
             if (!cuid2Regex.test(input.data)) {
@@ -1172,7 +1172,7 @@ var require_types = __commonJS({
                 code: ZodError_js_1.ZodIssueCode.invalid_string,
                 message: check.message
               });
-              status.dirty();
+              status2.dirty();
             }
           } else if (check.kind === "ulid") {
             if (!ulidRegex.test(input.data)) {
@@ -1182,7 +1182,7 @@ var require_types = __commonJS({
                 code: ZodError_js_1.ZodIssueCode.invalid_string,
                 message: check.message
               });
-              status.dirty();
+              status2.dirty();
             }
           } else if (check.kind === "url") {
             try {
@@ -1194,7 +1194,7 @@ var require_types = __commonJS({
                 code: ZodError_js_1.ZodIssueCode.invalid_string,
                 message: check.message
               });
-              status.dirty();
+              status2.dirty();
             }
           } else if (check.kind === "regex") {
             check.regex.lastIndex = 0;
@@ -1206,7 +1206,7 @@ var require_types = __commonJS({
                 code: ZodError_js_1.ZodIssueCode.invalid_string,
                 message: check.message
               });
-              status.dirty();
+              status2.dirty();
             }
           } else if (check.kind === "trim") {
             input.data = input.data.trim();
@@ -1218,7 +1218,7 @@ var require_types = __commonJS({
                 validation: { includes: check.value, position: check.position },
                 message: check.message
               });
-              status.dirty();
+              status2.dirty();
             }
           } else if (check.kind === "toLowerCase") {
             input.data = input.data.toLowerCase();
@@ -1232,7 +1232,7 @@ var require_types = __commonJS({
                 validation: { startsWith: check.value },
                 message: check.message
               });
-              status.dirty();
+              status2.dirty();
             }
           } else if (check.kind === "endsWith") {
             if (!input.data.endsWith(check.value)) {
@@ -1242,7 +1242,7 @@ var require_types = __commonJS({
                 validation: { endsWith: check.value },
                 message: check.message
               });
-              status.dirty();
+              status2.dirty();
             }
           } else if (check.kind === "datetime") {
             const regex = datetimeRegex(check);
@@ -1253,7 +1253,7 @@ var require_types = __commonJS({
                 validation: "datetime",
                 message: check.message
               });
-              status.dirty();
+              status2.dirty();
             }
           } else if (check.kind === "date") {
             const regex = dateRegex;
@@ -1264,7 +1264,7 @@ var require_types = __commonJS({
                 validation: "date",
                 message: check.message
               });
-              status.dirty();
+              status2.dirty();
             }
           } else if (check.kind === "time") {
             const regex = timeRegex(check);
@@ -1275,7 +1275,7 @@ var require_types = __commonJS({
                 validation: "time",
                 message: check.message
               });
-              status.dirty();
+              status2.dirty();
             }
           } else if (check.kind === "duration") {
             if (!durationRegex.test(input.data)) {
@@ -1285,7 +1285,7 @@ var require_types = __commonJS({
                 code: ZodError_js_1.ZodIssueCode.invalid_string,
                 message: check.message
               });
-              status.dirty();
+              status2.dirty();
             }
           } else if (check.kind === "ip") {
             if (!isValidIP(input.data, check.version)) {
@@ -1295,7 +1295,7 @@ var require_types = __commonJS({
                 code: ZodError_js_1.ZodIssueCode.invalid_string,
                 message: check.message
               });
-              status.dirty();
+              status2.dirty();
             }
           } else if (check.kind === "jwt") {
             if (!isValidJWT(input.data, check.alg)) {
@@ -1305,7 +1305,7 @@ var require_types = __commonJS({
                 code: ZodError_js_1.ZodIssueCode.invalid_string,
                 message: check.message
               });
-              status.dirty();
+              status2.dirty();
             }
           } else if (check.kind === "cidr") {
             if (!isValidCidr(input.data, check.version)) {
@@ -1315,7 +1315,7 @@ var require_types = __commonJS({
                 code: ZodError_js_1.ZodIssueCode.invalid_string,
                 message: check.message
               });
-              status.dirty();
+              status2.dirty();
             }
           } else if (check.kind === "base64") {
             if (!base64Regex.test(input.data)) {
@@ -1325,7 +1325,7 @@ var require_types = __commonJS({
                 code: ZodError_js_1.ZodIssueCode.invalid_string,
                 message: check.message
               });
-              status.dirty();
+              status2.dirty();
             }
           } else if (check.kind === "base64url") {
             if (!base64urlRegex.test(input.data)) {
@@ -1335,13 +1335,13 @@ var require_types = __commonJS({
                 code: ZodError_js_1.ZodIssueCode.invalid_string,
                 message: check.message
               });
-              status.dirty();
+              status2.dirty();
             }
           } else {
             util_js_1.util.assertNever(check);
           }
         }
-        return { status: status.value, value: input.data };
+        return { status: status2.value, value: input.data };
       }
       _regex(regex, validation, message) {
         return this.refinement((data) => regex.test(data), {
@@ -1618,7 +1618,7 @@ var require_types = __commonJS({
           return parseUtil_js_1.INVALID;
         }
         let ctx = void 0;
-        const status = new parseUtil_js_1.ParseStatus();
+        const status2 = new parseUtil_js_1.ParseStatus();
         for (const check of this._def.checks) {
           if (check.kind === "int") {
             if (!util_js_1.util.isInteger(input.data)) {
@@ -1629,7 +1629,7 @@ var require_types = __commonJS({
                 received: "float",
                 message: check.message
               });
-              status.dirty();
+              status2.dirty();
             }
           } else if (check.kind === "min") {
             const tooSmall = check.inclusive ? input.data < check.value : input.data <= check.value;
@@ -1643,7 +1643,7 @@ var require_types = __commonJS({
                 exact: false,
                 message: check.message
               });
-              status.dirty();
+              status2.dirty();
             }
           } else if (check.kind === "max") {
             const tooBig = check.inclusive ? input.data > check.value : input.data >= check.value;
@@ -1657,7 +1657,7 @@ var require_types = __commonJS({
                 exact: false,
                 message: check.message
               });
-              status.dirty();
+              status2.dirty();
             }
           } else if (check.kind === "multipleOf") {
             if (floatSafeRemainder(input.data, check.value) !== 0) {
@@ -1667,7 +1667,7 @@ var require_types = __commonJS({
                 multipleOf: check.value,
                 message: check.message
               });
-              status.dirty();
+              status2.dirty();
             }
           } else if (check.kind === "finite") {
             if (!Number.isFinite(input.data)) {
@@ -1676,13 +1676,13 @@ var require_types = __commonJS({
                 code: ZodError_js_1.ZodIssueCode.not_finite,
                 message: check.message
               });
-              status.dirty();
+              status2.dirty();
             }
           } else {
             util_js_1.util.assertNever(check);
           }
         }
-        return { status: status.value, value: input.data };
+        return { status: status2.value, value: input.data };
       }
       gte(value, message) {
         return this.setLimit("min", value, true, errorUtil_js_1.errorUtil.toString(message));
@@ -1848,7 +1848,7 @@ var require_types = __commonJS({
           return this._getInvalidInput(input);
         }
         let ctx = void 0;
-        const status = new parseUtil_js_1.ParseStatus();
+        const status2 = new parseUtil_js_1.ParseStatus();
         for (const check of this._def.checks) {
           if (check.kind === "min") {
             const tooSmall = check.inclusive ? input.data < check.value : input.data <= check.value;
@@ -1861,7 +1861,7 @@ var require_types = __commonJS({
                 inclusive: check.inclusive,
                 message: check.message
               });
-              status.dirty();
+              status2.dirty();
             }
           } else if (check.kind === "max") {
             const tooBig = check.inclusive ? input.data > check.value : input.data >= check.value;
@@ -1874,7 +1874,7 @@ var require_types = __commonJS({
                 inclusive: check.inclusive,
                 message: check.message
               });
-              status.dirty();
+              status2.dirty();
             }
           } else if (check.kind === "multipleOf") {
             if (input.data % check.value !== BigInt(0)) {
@@ -1884,13 +1884,13 @@ var require_types = __commonJS({
                 multipleOf: check.value,
                 message: check.message
               });
-              status.dirty();
+              status2.dirty();
             }
           } else {
             util_js_1.util.assertNever(check);
           }
         }
-        return { status: status.value, value: input.data };
+        return { status: status2.value, value: input.data };
       }
       _getInvalidInput(input) {
         const ctx = this._getOrReturnCtx(input);
@@ -2050,7 +2050,7 @@ var require_types = __commonJS({
           });
           return parseUtil_js_1.INVALID;
         }
-        const status = new parseUtil_js_1.ParseStatus();
+        const status2 = new parseUtil_js_1.ParseStatus();
         let ctx = void 0;
         for (const check of this._def.checks) {
           if (check.kind === "min") {
@@ -2064,7 +2064,7 @@ var require_types = __commonJS({
                 minimum: check.value,
                 type: "date"
               });
-              status.dirty();
+              status2.dirty();
             }
           } else if (check.kind === "max") {
             if (input.data.getTime() > check.value) {
@@ -2077,14 +2077,14 @@ var require_types = __commonJS({
                 maximum: check.value,
                 type: "date"
               });
-              status.dirty();
+              status2.dirty();
             }
           } else {
             util_js_1.util.assertNever(check);
           }
         }
         return {
-          status: status.value,
+          status: status2.value,
           value: new Date(input.data.getTime())
         };
       }
@@ -2278,7 +2278,7 @@ var require_types = __commonJS({
     };
     var ZodArray = class _ZodArray extends ZodType {
       _parse(input) {
-        const { ctx, status } = this._processInputParams(input);
+        const { ctx, status: status2 } = this._processInputParams(input);
         const def = this._def;
         if (ctx.parsedType !== util_js_1.ZodParsedType.array) {
           (0, parseUtil_js_1.addIssueToContext)(ctx, {
@@ -2301,7 +2301,7 @@ var require_types = __commonJS({
               exact: true,
               message: def.exactLength.message
             });
-            status.dirty();
+            status2.dirty();
           }
         }
         if (def.minLength !== null) {
@@ -2314,7 +2314,7 @@ var require_types = __commonJS({
               exact: false,
               message: def.minLength.message
             });
-            status.dirty();
+            status2.dirty();
           }
         }
         if (def.maxLength !== null) {
@@ -2327,20 +2327,20 @@ var require_types = __commonJS({
               exact: false,
               message: def.maxLength.message
             });
-            status.dirty();
+            status2.dirty();
           }
         }
         if (ctx.common.async) {
           return Promise.all([...ctx.data].map((item, i) => {
             return def.type._parseAsync(new ParseInputLazyPath(ctx, item, ctx.path, i));
           })).then((result2) => {
-            return parseUtil_js_1.ParseStatus.mergeArray(status, result2);
+            return parseUtil_js_1.ParseStatus.mergeArray(status2, result2);
           });
         }
         const result = [...ctx.data].map((item, i) => {
           return def.type._parseSync(new ParseInputLazyPath(ctx, item, ctx.path, i));
         });
-        return parseUtil_js_1.ParseStatus.mergeArray(status, result);
+        return parseUtil_js_1.ParseStatus.mergeArray(status2, result);
       }
       get element() {
         return this._def.type;
@@ -2430,7 +2430,7 @@ var require_types = __commonJS({
           });
           return parseUtil_js_1.INVALID;
         }
-        const { status, ctx } = this._processInputParams(input);
+        const { status: status2, ctx } = this._processInputParams(input);
         const { shape, keys: shapeKeys } = this._getCached();
         const extraKeys = [];
         if (!(this._def.catchall instanceof ZodNever && this._def.unknownKeys === "strip")) {
@@ -2465,7 +2465,7 @@ var require_types = __commonJS({
                 code: ZodError_js_1.ZodIssueCode.unrecognized_keys,
                 keys: extraKeys
               });
-              status.dirty();
+              status2.dirty();
             }
           } else if (unknownKeys === "strip") {
           } else {
@@ -2499,10 +2499,10 @@ var require_types = __commonJS({
             }
             return syncPairs;
           }).then((syncPairs) => {
-            return parseUtil_js_1.ParseStatus.mergeObjectSync(status, syncPairs);
+            return parseUtil_js_1.ParseStatus.mergeObjectSync(status2, syncPairs);
           });
         } else {
-          return parseUtil_js_1.ParseStatus.mergeObjectSync(status, pairs);
+          return parseUtil_js_1.ParseStatus.mergeObjectSync(status2, pairs);
         }
       }
       get shape() {
@@ -2983,7 +2983,7 @@ var require_types = __commonJS({
     }
     var ZodIntersection = class extends ZodType {
       _parse(input) {
-        const { status, ctx } = this._processInputParams(input);
+        const { status: status2, ctx } = this._processInputParams(input);
         const handleParsed = (parsedLeft, parsedRight) => {
           if ((0, parseUtil_js_1.isAborted)(parsedLeft) || (0, parseUtil_js_1.isAborted)(parsedRight)) {
             return parseUtil_js_1.INVALID;
@@ -2996,9 +2996,9 @@ var require_types = __commonJS({
             return parseUtil_js_1.INVALID;
           }
           if ((0, parseUtil_js_1.isDirty)(parsedLeft) || (0, parseUtil_js_1.isDirty)(parsedRight)) {
-            status.dirty();
+            status2.dirty();
           }
-          return { status: status.value, value: merged.data };
+          return { status: status2.value, value: merged.data };
         };
         if (ctx.common.async) {
           return Promise.all([
@@ -3037,7 +3037,7 @@ var require_types = __commonJS({
     };
     var ZodTuple = class _ZodTuple extends ZodType {
       _parse(input) {
-        const { status, ctx } = this._processInputParams(input);
+        const { status: status2, ctx } = this._processInputParams(input);
         if (ctx.parsedType !== util_js_1.ZodParsedType.array) {
           (0, parseUtil_js_1.addIssueToContext)(ctx, {
             code: ZodError_js_1.ZodIssueCode.invalid_type,
@@ -3065,7 +3065,7 @@ var require_types = __commonJS({
             exact: false,
             type: "array"
           });
-          status.dirty();
+          status2.dirty();
         }
         const items = [...ctx.data].map((item, itemIndex) => {
           const schema = this._def.items[itemIndex] || this._def.rest;
@@ -3075,10 +3075,10 @@ var require_types = __commonJS({
         }).filter((x) => !!x);
         if (ctx.common.async) {
           return Promise.all(items).then((results) => {
-            return parseUtil_js_1.ParseStatus.mergeArray(status, results);
+            return parseUtil_js_1.ParseStatus.mergeArray(status2, results);
           });
         } else {
-          return parseUtil_js_1.ParseStatus.mergeArray(status, items);
+          return parseUtil_js_1.ParseStatus.mergeArray(status2, items);
         }
       }
       get items() {
@@ -3111,7 +3111,7 @@ var require_types = __commonJS({
         return this._def.valueType;
       }
       _parse(input) {
-        const { status, ctx } = this._processInputParams(input);
+        const { status: status2, ctx } = this._processInputParams(input);
         if (ctx.parsedType !== util_js_1.ZodParsedType.object) {
           (0, parseUtil_js_1.addIssueToContext)(ctx, {
             code: ZodError_js_1.ZodIssueCode.invalid_type,
@@ -3131,9 +3131,9 @@ var require_types = __commonJS({
           });
         }
         if (ctx.common.async) {
-          return parseUtil_js_1.ParseStatus.mergeObjectAsync(status, pairs);
+          return parseUtil_js_1.ParseStatus.mergeObjectAsync(status2, pairs);
         } else {
-          return parseUtil_js_1.ParseStatus.mergeObjectSync(status, pairs);
+          return parseUtil_js_1.ParseStatus.mergeObjectSync(status2, pairs);
         }
       }
       get element() {
@@ -3165,7 +3165,7 @@ var require_types = __commonJS({
         return this._def.valueType;
       }
       _parse(input) {
-        const { status, ctx } = this._processInputParams(input);
+        const { status: status2, ctx } = this._processInputParams(input);
         if (ctx.parsedType !== util_js_1.ZodParsedType.map) {
           (0, parseUtil_js_1.addIssueToContext)(ctx, {
             code: ZodError_js_1.ZodIssueCode.invalid_type,
@@ -3192,11 +3192,11 @@ var require_types = __commonJS({
                 return parseUtil_js_1.INVALID;
               }
               if (key.status === "dirty" || value.status === "dirty") {
-                status.dirty();
+                status2.dirty();
               }
               finalMap.set(key.value, value.value);
             }
-            return { status: status.value, value: finalMap };
+            return { status: status2.value, value: finalMap };
           });
         } else {
           const finalMap = /* @__PURE__ */ new Map();
@@ -3207,11 +3207,11 @@ var require_types = __commonJS({
               return parseUtil_js_1.INVALID;
             }
             if (key.status === "dirty" || value.status === "dirty") {
-              status.dirty();
+              status2.dirty();
             }
             finalMap.set(key.value, value.value);
           }
-          return { status: status.value, value: finalMap };
+          return { status: status2.value, value: finalMap };
         }
       }
     };
@@ -3226,7 +3226,7 @@ var require_types = __commonJS({
     };
     var ZodSet = class _ZodSet extends ZodType {
       _parse(input) {
-        const { status, ctx } = this._processInputParams(input);
+        const { status: status2, ctx } = this._processInputParams(input);
         if (ctx.parsedType !== util_js_1.ZodParsedType.set) {
           (0, parseUtil_js_1.addIssueToContext)(ctx, {
             code: ZodError_js_1.ZodIssueCode.invalid_type,
@@ -3246,7 +3246,7 @@ var require_types = __commonJS({
               exact: false,
               message: def.minSize.message
             });
-            status.dirty();
+            status2.dirty();
           }
         }
         if (def.maxSize !== null) {
@@ -3259,7 +3259,7 @@ var require_types = __commonJS({
               exact: false,
               message: def.maxSize.message
             });
-            status.dirty();
+            status2.dirty();
           }
         }
         const valueType = this._def.valueType;
@@ -3269,10 +3269,10 @@ var require_types = __commonJS({
             if (element.status === "aborted")
               return parseUtil_js_1.INVALID;
             if (element.status === "dirty")
-              status.dirty();
+              status2.dirty();
             parsedSet.add(element.value);
           }
-          return { status: status.value, value: parsedSet };
+          return { status: status2.value, value: parsedSet };
         }
         const elements = [...ctx.data.values()].map((item, i) => valueType._parse(new ParseInputLazyPath(ctx, item, ctx.path, i)));
         if (ctx.common.async) {
@@ -3610,15 +3610,15 @@ var require_types = __commonJS({
         return this._def.schema._def.typeName === ZodFirstPartyTypeKind4.ZodEffects ? this._def.schema.sourceType() : this._def.schema;
       }
       _parse(input) {
-        const { status, ctx } = this._processInputParams(input);
+        const { status: status2, ctx } = this._processInputParams(input);
         const effect = this._def.effect || null;
         const checkCtx = {
           addIssue: (arg) => {
             (0, parseUtil_js_1.addIssueToContext)(ctx, arg);
             if (arg.fatal) {
-              status.abort();
+              status2.abort();
             } else {
-              status.dirty();
+              status2.dirty();
             }
           },
           get path() {
@@ -3630,7 +3630,7 @@ var require_types = __commonJS({
           const processed = effect.transform(ctx.data, checkCtx);
           if (ctx.common.async) {
             return Promise.resolve(processed).then(async (processed2) => {
-              if (status.value === "aborted")
+              if (status2.value === "aborted")
                 return parseUtil_js_1.INVALID;
               const result = await this._def.schema._parseAsync({
                 data: processed2,
@@ -3641,12 +3641,12 @@ var require_types = __commonJS({
                 return parseUtil_js_1.INVALID;
               if (result.status === "dirty")
                 return (0, parseUtil_js_1.DIRTY)(result.value);
-              if (status.value === "dirty")
+              if (status2.value === "dirty")
                 return (0, parseUtil_js_1.DIRTY)(result.value);
               return result;
             });
           } else {
-            if (status.value === "aborted")
+            if (status2.value === "aborted")
               return parseUtil_js_1.INVALID;
             const result = this._def.schema._parseSync({
               data: processed,
@@ -3657,7 +3657,7 @@ var require_types = __commonJS({
               return parseUtil_js_1.INVALID;
             if (result.status === "dirty")
               return (0, parseUtil_js_1.DIRTY)(result.value);
-            if (status.value === "dirty")
+            if (status2.value === "dirty")
               return (0, parseUtil_js_1.DIRTY)(result.value);
             return result;
           }
@@ -3682,17 +3682,17 @@ var require_types = __commonJS({
             if (inner.status === "aborted")
               return parseUtil_js_1.INVALID;
             if (inner.status === "dirty")
-              status.dirty();
+              status2.dirty();
             executeRefinement(inner.value);
-            return { status: status.value, value: inner.value };
+            return { status: status2.value, value: inner.value };
           } else {
             return this._def.schema._parseAsync({ data: ctx.data, path: ctx.path, parent: ctx }).then((inner) => {
               if (inner.status === "aborted")
                 return parseUtil_js_1.INVALID;
               if (inner.status === "dirty")
-                status.dirty();
+                status2.dirty();
               return executeRefinement(inner.value).then(() => {
-                return { status: status.value, value: inner.value };
+                return { status: status2.value, value: inner.value };
               });
             });
           }
@@ -3710,13 +3710,13 @@ var require_types = __commonJS({
             if (result instanceof Promise) {
               throw new Error(`Asynchronous transform encountered during synchronous parse operation. Use .parseAsync instead.`);
             }
-            return { status: status.value, value: result };
+            return { status: status2.value, value: result };
           } else {
             return this._def.schema._parseAsync({ data: ctx.data, path: ctx.path, parent: ctx }).then((base) => {
               if (!(0, parseUtil_js_1.isValid)(base))
                 return parseUtil_js_1.INVALID;
               return Promise.resolve(effect.transform(base.value, checkCtx)).then((result) => ({
-                status: status.value,
+                status: status2.value,
                 value: result
               }));
             });
@@ -3903,7 +3903,7 @@ var require_types = __commonJS({
     exports2.ZodBranded = ZodBranded;
     var ZodPipeline = class _ZodPipeline extends ZodType {
       _parse(input) {
-        const { status, ctx } = this._processInputParams(input);
+        const { status: status2, ctx } = this._processInputParams(input);
         if (ctx.common.async) {
           const handleAsync = async () => {
             const inResult = await this._def.in._parseAsync({
@@ -3914,7 +3914,7 @@ var require_types = __commonJS({
             if (inResult.status === "aborted")
               return parseUtil_js_1.INVALID;
             if (inResult.status === "dirty") {
-              status.dirty();
+              status2.dirty();
               return (0, parseUtil_js_1.DIRTY)(inResult.value);
             } else {
               return this._def.out._parseAsync({
@@ -3934,7 +3934,7 @@ var require_types = __commonJS({
           if (inResult.status === "aborted")
             return parseUtil_js_1.INVALID;
           if (inResult.status === "dirty") {
-            status.dirty();
+            status2.dirty();
             return {
               status: "dirty",
               value: inResult.value
@@ -24278,8 +24278,8 @@ var init_types = __esm({
 });
 
 // node_modules/.pnpm/@modelcontextprotocol+sdk@1.29.0_zod@4.4.3/node_modules/@modelcontextprotocol/sdk/dist/esm/experimental/tasks/interfaces.js
-function isTerminal(status) {
-  return status === "completed" || status === "failed" || status === "cancelled";
+function isTerminal(status2) {
+  return status2 === "completed" || status2 === "failed" || status2 === "cancelled";
 }
 var init_interfaces = __esm({
   "node_modules/.pnpm/@modelcontextprotocol+sdk@1.29.0_zod@4.4.3/node_modules/@modelcontextprotocol/sdk/dist/esm/experimental/tasks/interfaces.js"() {
@@ -26827,8 +26827,8 @@ var init_protocol = __esm({
             }
             return task;
           },
-          storeTaskResult: async (taskId, status, result) => {
-            await taskStore.storeTaskResult(taskId, status, result, sessionId);
+          storeTaskResult: async (taskId, status2, result) => {
+            await taskStore.storeTaskResult(taskId, status2, result, sessionId);
             const task = await taskStore.getTask(taskId, sessionId);
             if (task) {
               const notification = TaskStatusNotificationSchema.parse({
@@ -26844,15 +26844,15 @@ var init_protocol = __esm({
           getTaskResult: (taskId) => {
             return taskStore.getTaskResult(taskId, sessionId);
           },
-          updateTaskStatus: async (taskId, status, statusMessage) => {
+          updateTaskStatus: async (taskId, status2, statusMessage) => {
             const task = await taskStore.getTask(taskId, sessionId);
             if (!task) {
               throw new McpError(ErrorCode.InvalidParams, `Task "${taskId}" not found - it may have been cleaned up`);
             }
             if (isTerminal(task.status)) {
-              throw new McpError(ErrorCode.InvalidParams, `Cannot update task "${taskId}" from terminal status "${task.status}" to "${status}". Terminal states (completed, failed, cancelled) cannot transition to other states.`);
+              throw new McpError(ErrorCode.InvalidParams, `Cannot update task "${taskId}" from terminal status "${task.status}" to "${status2}". Terminal states (completed, failed, cancelled) cannot transition to other states.`);
             }
-            await taskStore.updateTaskStatus(taskId, status, statusMessage, sessionId);
+            await taskStore.updateTaskStatus(taskId, status2, statusMessage, sessionId);
             const updatedTask = await taskStore.getTask(taskId, sessionId);
             if (updatedTask) {
               const notification = TaskStatusNotificationSchema.parse({
@@ -35513,7 +35513,9 @@ var init_stdio2 = __esm({
 // src/remote-server.ts
 var remote_server_exports = {};
 __export(remote_server_exports, {
-  startRemoteServer: () => startRemoteServer
+  search: () => search,
+  startRemoteServer: () => startRemoteServer,
+  status: () => status
 });
 function jsonResult(obj) {
   return { content: [{ type: "text", text: JSON.stringify(obj, null, 2) }] };
@@ -35542,30 +35544,68 @@ async function errorResult(res) {
   return jsonResult({ ok: false, status: res.status, error: msg });
 }
 async function search(query, scope, limit) {
-  const empty = { source: "brain-api", query, scope, count: 0, results: [] };
   if (API_URL === void 0 || API_URL === "") {
-    return { ...empty, source: "unconfigured" };
+    return jsonResult({ ok: false, error: "unconfigured \u2014 set TEAMKB_API_URL to your team brain" });
   }
   const url = `${API_URL.replace(/\/+$/, "")}/api/search`;
+  let res;
   try {
-    const res = await fetch(url, {
+    res = await fetch(url, {
       method: "POST",
       headers: authHeaders(),
       body: JSON.stringify({ query, scope, pagination: { page: 1, pageSize: limit } })
     });
-    if (!res.ok) return empty;
-    const body = await res.json();
-    const results = (body.hits ?? []).filter((h) => typeof h.citation === "string" && h.citation.length > 0).map((h) => ({
-      citation: h.citation,
-      snippet: typeof h.snippet === "string" ? h.snippet : "",
-      score: typeof h.score === "number" ? h.score : 0,
-      title: h.title,
-      collection: h.collection
-    }));
-    return { source: "brain-api", query, scope, count: results.length, results };
-  } catch {
-    return empty;
+  } catch (e) {
+    return jsonResult({
+      ok: false,
+      error: `could not reach the brain API: ${e instanceof Error ? e.message : String(e)}`
+    });
   }
+  if (!res.ok) return errorResult(res);
+  const body = await res.json();
+  const results = (body.hits ?? []).filter((h) => typeof h.citation === "string" && h.citation.length > 0).map((h) => ({
+    citation: h.citation,
+    snippet: typeof h.snippet === "string" ? h.snippet : "",
+    score: typeof h.score === "number" ? h.score : 0,
+    title: h.title,
+    collection: h.collection
+  }));
+  return jsonResult({ source: "brain-api", query, scope, count: results.length, results });
+}
+async function status() {
+  const tokenSet = API_TOKEN !== void 0 && API_TOKEN !== "";
+  if (API_URL === void 0 || API_URL === "") {
+    return jsonResult({
+      mode: "team",
+      apiUrl: null,
+      tokenSet,
+      healthy: false,
+      version: null,
+      error: "unconfigured \u2014 set TEAMKB_API_URL to your team brain"
+    });
+  }
+  const apiUrl = API_URL.replace(/\/+$/, "");
+  let res;
+  try {
+    res = await fetch(`${apiUrl}/api/health`, { method: "GET" });
+  } catch (e) {
+    return jsonResult({
+      mode: "team",
+      apiUrl,
+      tokenSet,
+      healthy: false,
+      version: null,
+      error: `could not reach the brain API: ${e instanceof Error ? e.message : String(e)}`
+    });
+  }
+  let version = null;
+  try {
+    const b = await res.json();
+    if (typeof b.version === "string") version = b.version;
+  } catch {
+    version = null;
+  }
+  return jsonResult({ mode: "team", apiUrl, tokenSet, healthy: res.ok, version });
 }
 async function startRemoteServer() {
   const transport = new StdioServerTransport();
@@ -35613,10 +35653,13 @@ var init_remote_server = __esm({
         scope: import_zod2.z.enum(["curated", "all", "inbox", "archived"]).optional().describe("Search scope: curated (default), all, inbox, or archived"),
         limit: import_zod2.z.number().int().min(1).max(50).optional().describe("Maximum number of cited hits to return (default 10)")
       },
-      async (params) => {
-        const result = await search(params.query, params.scope ?? "curated", params.limit ?? 10);
-        return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
-      }
+      async (params) => search(params.query, params.scope ?? "curated", params.limit ?? 10)
+    );
+    server.tool(
+      "brain_status",
+      "Check your connection to the team brain: are you in team mode, is TEAMKB_API_URL reachable, and is a per-user token set? Calls the brain's health probe (no auth) and reports { mode, apiUrl, tokenSet, healthy, version }. Read-only \u2014 no query, touches no data.",
+      {},
+      async () => status()
     );
     server.tool(
       "brain_capture",
@@ -38846,6 +38889,28 @@ var init_seed_queries = __esm({
   }
 });
 
+// ../qmd-team-intent-kb/packages/qmd-adapter/dist/eval/stratified-report.js
+var init_stratified_report = __esm({
+  "../qmd-team-intent-kb/packages/qmd-adapter/dist/eval/stratified-report.js"() {
+    "use strict";
+    init_metrics();
+  }
+});
+
+// ../qmd-team-intent-kb/packages/qmd-adapter/dist/eval/qmd-retrieval.js
+var init_qmd_retrieval = __esm({
+  "../qmd-team-intent-kb/packages/qmd-adapter/dist/eval/qmd-retrieval.js"() {
+    "use strict";
+  }
+});
+
+// ../qmd-team-intent-kb/packages/qmd-adapter/dist/eval/datasets/governed-brain-v1.js
+var init_governed_brain_v1 = __esm({
+  "../qmd-team-intent-kb/packages/qmd-adapter/dist/eval/datasets/governed-brain-v1.js"() {
+    "use strict";
+  }
+});
+
 // ../qmd-team-intent-kb/packages/qmd-adapter/dist/eval/index.js
 var init_eval = __esm({
   "../qmd-team-intent-kb/packages/qmd-adapter/dist/eval/index.js"() {
@@ -38853,6 +38918,9 @@ var init_eval = __esm({
     init_metrics();
     init_run_eval();
     init_seed_queries();
+    init_stratified_report();
+    init_qmd_retrieval();
+    init_governed_brain_v1();
   }
 });
 
@@ -38870,6 +38938,21 @@ var init_native = __esm({
   "../qmd-team-intent-kb/packages/qmd-adapter/dist/native/index.js"() {
     "use strict";
     init_fts5_backend();
+  }
+});
+
+// ../qmd-team-intent-kb/packages/qmd-adapter/dist/reindex/reindex.js
+var init_reindex = __esm({
+  "../qmd-team-intent-kb/packages/qmd-adapter/dist/reindex/reindex.js"() {
+    "use strict";
+  }
+});
+
+// ../qmd-team-intent-kb/packages/qmd-adapter/dist/canary/search-canary.js
+var init_search_canary = __esm({
+  "../qmd-team-intent-kb/packages/qmd-adapter/dist/canary/search-canary.js"() {
+    "use strict";
+    init_reindex();
   }
 });
 
@@ -38891,6 +38974,8 @@ var init_dist4 = __esm({
     init_weights();
     init_eval();
     init_native();
+    init_reindex();
+    init_search_canary();
   }
 });
 
@@ -38994,7 +39079,23 @@ var init_patterns = __esm({
         id: "heroku-api-key",
         name: "Heroku API Key",
         regex: /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/,
-        description: "Heroku API key (UUID format)"
+        description: "Heroku API key (UUID format), only in key-context",
+        // A Heroku API key is UUID-shaped, but so is a request id, a trace id, or a
+        // bead id in ordinary prose. Firing on any bare UUID over-blocks benign
+        // memories (the e06.3 eval's `neg-uuid-in-prose-01` false positive dragged
+        // secret-scanner + content-classifier precision below 1.0). Gate the rule
+        // behind key-context: only flag a UUID as a credential when a `heroku` /
+        // `api` / `key` / `token` keyword, or an assignment/secret env var, is
+        // present in the same scan window. A REAL Heroku key still fires (it is set
+        // via `HEROKU_API_KEY=` or referenced with those words); a naked UUID in
+        // prose does not. Precision up, recall held (bead compile-then-govern-e06.15).
+        //
+        // Keyword boundaries are separator-based `(?:^|[^a-z0-9])…(?:[^a-z0-9]|$)`
+        // rather than `\b`, so an underscored env-var token (`HEROKU_API_KEY`, where
+        // `\bkey\b` would fail because `_` is a word char) still satisfies the gate.
+        // The final alternative matches an env-var-style assignment (`FOO=` / `FOO:`).
+        // Linear-time (no nested quantifiers) — ReDoS-safe.
+        requiresContext: /(?:^|[^a-z0-9])(?:heroku|api[-_ ]?key|api|key|token|secret|credential|bearer)(?:[^a-z0-9]|$)|[A-Za-z][A-Za-z0-9_]*\s*[:=]/i
       },
       {
         id: "mysql-connection-string",
@@ -39027,19 +39128,194 @@ var init_patterns = __esm({
         name: "SSN-like Pattern",
         regex: /\b[0-9]{3}-[0-9]{2}-[0-9]{4}\b/,
         description: "Social Security Number pattern (XXX-XX-XXXX)"
+      },
+      // The three patterns below converge this classifier's PII vocabulary UP to the
+      // repository-boundary disclosure filter's PII_PATTERN
+      // (@qmd-team-intent-kb/common). The boundary filter caught SSN keyword, DOB,
+      // and background-check terms; classifyContent did not, so a DOB-only leak
+      // passed the policy pipeline (which gates on classifyContent) and was caught
+      // only at the write boundary — the two vocabularies had drifted, and the
+      // classifier was the weaker one (the e06.3 eval's `pii-inline-dob-01`
+      // documented gap). Adding these TIGHTENS detection (the safe direction) so the
+      // policy pipeline rejects DOB / background-check / SSN-keyword PII pre-boundary
+      // too. Bounded character classes only — linear time, no ReDoS surface.
+      {
+        id: "ssn-keyword",
+        name: "SSN Keyword",
+        regex: /\bSSN\b|social security (?:number|no)/i,
+        description: "Social Security Number referenced by keyword (SSN / social security number)"
+      },
+      {
+        id: "date-of-birth",
+        name: "Date of Birth",
+        regex: /date of birth|\bDOB\b\s*[:=]/i,
+        description: "Date-of-birth disclosure (date of birth / DOB: / DOB=)"
+      },
+      {
+        id: "background-check",
+        name: "Background Check Data",
+        regex: /background[- ]check (?:result|report|passed|failed)/i,
+        description: "Background-check result/report disclosure"
       }
     ];
   }
 });
 
 // ../qmd-team-intent-kb/packages/claude-runtime/dist/secrets/secret-scanner.js
+function execWithContext(pattern, text, contextText) {
+  if (pattern.regex.global || pattern.regex.sticky) {
+    pattern.regex.lastIndex = 0;
+  }
+  const match = pattern.regex.exec(text);
+  if (!match)
+    return null;
+  if (pattern.requiresContext) {
+    if (pattern.requiresContext.global || pattern.requiresContext.sticky) {
+      pattern.requiresContext.lastIndex = 0;
+    }
+    const window = contextText ?? text;
+    if (!pattern.requiresContext.test(window))
+      return null;
+  }
+  return match;
+}
+function scanFlat(text, patterns, matches, locate, patternIdOverride, contextText) {
+  for (const pattern of patterns) {
+    const match = execWithContext(pattern, text, contextText);
+    if (match) {
+      const { line, column } = locate(match.index, match[0].length);
+      matches.push({
+        patternId: patternIdOverride ? patternIdOverride(pattern.id) : pattern.id,
+        patternName: pattern.name,
+        line,
+        column,
+        matchLength: match[0].length
+      });
+    }
+  }
+}
+function scanNewlineCollapsed(content, patterns, alreadyFired, matches) {
+  if (content.length > LIMITS.collapsedScanMaxChars)
+    return;
+  const singleSpace = content.replace(/\s+/g, " ");
+  const noWhitespace = content.replace(/\s+/g, "");
+  const remaining = patterns.filter((p) => !alreadyFired.has(p.id));
+  if (remaining.length === 0)
+    return;
+  const locate = () => ({ line: 1, column: 1 });
+  const before = matches.length;
+  scanFlat(singleSpace, remaining, matches, locate);
+  const stillUnmatched = remaining.filter((p) => !matches.slice(before).some((m) => m.patternId === p.id));
+  if (stillUnmatched.length > 0)
+    scanFlat(noWhitespace, stillUnmatched, matches, locate);
+}
+function scanEncodedWrapped(content, patterns, matches) {
+  let decodedCandidates = 0;
+  let decodedBytes = 0;
+  const seenWrapped = /* @__PURE__ */ new Set();
+  const tryDecode = (raw, index, decode, prefix) => {
+    if (decodedCandidates >= LIMITS.maxEncodedCandidates)
+      return;
+    if (raw.length < LIMITS.minEncodedCandidateLen)
+      return;
+    if (raw.length > LIMITS.maxEncodedCandidateLen)
+      return;
+    if (decodedBytes >= LIMITS.maxTotalDecodedBytes)
+      return;
+    const decoded = decode(raw);
+    if (decoded === null || decoded.length === 0)
+      return;
+    decodedCandidates += 1;
+    decodedBytes += decoded.length;
+    const line = index >= 0 ? content.slice(0, index).split("\n").length : 1;
+    const column = index >= 0 ? index - content.lastIndexOf("\n", index) : 1;
+    scanFlat(
+      decoded,
+      patterns,
+      matches,
+      () => ({ line, column: Math.max(1, column) }),
+      (patternId) => {
+        const wrappedId = `${prefix}:${patternId}`;
+        return wrappedId;
+      },
+      // The decoded blob is just the raw value; a context-gated pattern must be
+      // evaluated against the ORIGINAL content (where `heroku` / `api key`
+      // keywords live), else a real wrapped Heroku key is silently missed
+      // (Gemini finding, e06.15). Value regex still runs on `decoded`.
+      content
+    );
+    seenWrapped.add(raw);
+  };
+  for (const m of content.matchAll(BASE64_CANDIDATE_RE)) {
+    if (decodedCandidates >= LIMITS.maxEncodedCandidates)
+      break;
+    if (decodedBytes >= LIMITS.maxTotalDecodedBytes)
+      break;
+    const raw = m[0];
+    if (seenWrapped.has(raw))
+      continue;
+    tryDecode(raw, m.index ?? -1, decodeBase64, "base64-wrapped");
+  }
+  for (const m of content.matchAll(HEX_CANDIDATE_RE)) {
+    if (decodedCandidates >= LIMITS.maxEncodedCandidates)
+      break;
+    if (decodedBytes >= LIMITS.maxTotalDecodedBytes)
+      break;
+    const raw = m[0];
+    if (seenWrapped.has(raw) || raw.length % 2 !== 0)
+      continue;
+    tryDecode(raw, m.index ?? -1, decodeHex, "hex-wrapped");
+  }
+}
+function decodeBase64(candidate) {
+  const normalized = candidate.replace(/-/g, "+").replace(/_/g, "/").replace(/=+$/, "");
+  if (normalized.length % 4 === 1)
+    return null;
+  const padded = normalized.padEnd(Math.ceil(normalized.length / 4) * 4, "=");
+  try {
+    const buf = Buffer.from(padded, "base64");
+    if (buf.length === 0)
+      return null;
+    const text = buf.toString("utf8");
+    if (!isMostlyPrintable(text))
+      return null;
+    return text;
+  } catch {
+    return null;
+  }
+}
+function decodeHex(candidate) {
+  try {
+    const buf = Buffer.from(candidate, "hex");
+    if (buf.length === 0 || buf.length * 2 !== candidate.length)
+      return null;
+    const text = buf.toString("utf8");
+    if (!isMostlyPrintable(text))
+      return null;
+    return text;
+  } catch {
+    return null;
+  }
+}
+function isMostlyPrintable(text) {
+  if (text.length === 0)
+    return false;
+  let printable = 0;
+  for (let i = 0; i < text.length; i++) {
+    const code = text.charCodeAt(i);
+    if (code >= 32 && code <= 126 || code === 9 || code === 10 || code === 13) {
+      printable += 1;
+    }
+  }
+  return printable / text.length >= 0.9;
+}
 function scanForSecrets(content, patterns = SECRET_PATTERNS2) {
   const matches = [];
   const lines = content.split("\n");
   for (let lineIdx = 0; lineIdx < lines.length; lineIdx++) {
     const line = lines[lineIdx];
     for (const pattern of patterns) {
-      const match = pattern.regex.exec(line);
+      const match = execWithContext(pattern, line);
       if (match) {
         matches.push({
           patternId: pattern.id,
@@ -39051,12 +39327,32 @@ function scanForSecrets(content, patterns = SECRET_PATTERNS2) {
       }
     }
   }
+  if (content.includes("\n")) {
+    const firedOnLineScan = new Set(matches.map((m) => m.patternId));
+    scanNewlineCollapsed(content, patterns, firedOnLineScan, matches);
+  }
+  scanEncodedWrapped(content, patterns, matches);
   return matches;
 }
+var LIMITS, BASE64_CANDIDATE_RE, HEX_CANDIDATE_RE;
 var init_secret_scanner = __esm({
   "../qmd-team-intent-kb/packages/claude-runtime/dist/secrets/secret-scanner.js"() {
     "use strict";
     init_patterns();
+    LIMITS = {
+      /** Max content length (chars) the newline-collapsed pre-pass will process. */
+      collapsedScanMaxChars: 512 * 1024,
+      /** Min length of a base64/hex candidate substring worth decoding (avoids noise). */
+      minEncodedCandidateLen: 24,
+      /** Max length of a single encoded candidate we will decode (bounds one decode). */
+      maxEncodedCandidateLen: 8 * 1024,
+      /** Max number of encoded candidates decoded per scan (bounds candidate count). */
+      maxEncodedCandidates: 64,
+      /** Max total decoded bytes across all candidates (bounds aggregate decode work). */
+      maxTotalDecodedBytes: 256 * 1024
+    };
+    BASE64_CANDIDATE_RE = /[A-Za-z0-9+/_-]{24,}={0,2}/g;
+    HEX_CANDIDATE_RE = /[A-Fa-f0-9]{24,}/g;
   }
 });
 

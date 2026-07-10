@@ -9,10 +9,15 @@ import { defineConfig } from 'vitest/config';
  * CI. Coverage is therefore scoped to exactly those two files so the floor is an
  * honest number for the surface these unit tests own, not diluted by modules that
  * are only reachable through the full local stack (covered by smoke.yml instead).
+ *
+ * Both suites run: src/**\/*.test.ts (mode + remote-server unit tests) and
+ * test/**\/*.test.ts (the R4 error-surfacing suite). The pre-existing smoke/ and
+ * scripts/ suites use the node:test runner (`node --test`, via their own npm
+ * scripts) — vitest must not adopt them, so neither glob reaches into them.
  */
 export default defineConfig({
   test: {
-    include: ['src/**/*.test.ts'],
+    include: ['src/**/*.test.ts', 'test/**/*.test.ts'],
     environment: 'node',
     coverage: {
       provider: 'v8',

@@ -3,9 +3,11 @@
  * Governed Second Brain — team mode (remote proxy).
  *
  * The same plugin, in TEAM mode: a self-contained stdio server that proxies the
- * read tool (`brain_search`) to your team's governed brain API over the tailnet.
- * Selected automatically by the dispatcher (src/index.ts) when TEAMKB_API_URL is
- * set; otherwise the plugin runs the local in-process brain instead.
+ * read tools (`brain_search`, `brain_status`) to your team's governed brain API
+ * over the tailnet. Selected automatically by the dispatcher (src/index.ts) when
+ * TEAMKB_API_URL is set; otherwise the plugin runs the local in-process brain
+ * instead. Failures are surfaced as distinct, visible errors — never a silent
+ * empty result set.
  *
  * Deliberately minimal: no database, no qmd-adapter, no native modules — so team
  * mode runs from a marketplace clone with zero install/build and never touches
@@ -92,45 +94,100 @@ interface CitedHit {
   collection?: string;
 }
 
+/**
+ * Query the team brain and return an MCP result. Errors are SURFACED, never
+ * swallowed into an empty hit set: a rejected token, a dead API, and being
+ * off-tailnet each produce a distinct, visible error (the exact shaping
+ * capture/transition already use) instead of a silent count:0 that reads like
+ * "the brain has nothing for you."
+ */
 export async function search(
   query: string,
   scope: string,
   limit: number,
-): Promise<{ source: string; query: string; scope: string; count: number; results: CitedHit[] }> {
-  const empty = { source: 'brain-api', query, scope, count: 0, results: [] as CitedHit[] };
+): Promise<ReturnType<typeof jsonResult>> {
   if (API_URL === undefined || API_URL === '') {
-    return { ...empty, source: 'unconfigured' };
+    return jsonResult({ ok: false, error: 'unconfigured — set TEAMKB_API_URL to your team brain' });
   }
   const url = `${API_URL.replace(/\/+$/, '')}/api/search`;
+  let res: Response;
   try {
-    const res = await fetch(url, {
+    res = await fetch(url, {
       method: 'POST',
       headers: authHeaders(),
       body: JSON.stringify({ query, scope, pagination: { page: 1, pageSize: limit } }),
     });
-    if (!res.ok) return empty;
-    const body = (await res.json()) as {
-      hits?: Array<{
-        citation?: string;
-        snippet?: string;
-        score?: number;
-        title?: string;
-        collection?: string;
-      }>;
-    };
-    const results: CitedHit[] = (body.hits ?? [])
-      .filter((h) => typeof h.citation === 'string' && h.citation.length > 0)
-      .map((h) => ({
-        citation: h.citation as string,
-        snippet: typeof h.snippet === 'string' ? h.snippet : '',
-        score: typeof h.score === 'number' ? h.score : 0,
-        title: h.title,
-        collection: h.collection,
-      }));
-    return { source: 'brain-api', query, scope, count: results.length, results };
-  } catch {
-    return empty;
+  } catch (e) {
+    // fetch() itself threw — dead API, off-tailnet, DNS failure. Surface it.
+    return jsonResult({
+      ok: false,
+      error: `could not reach the brain API: ${e instanceof Error ? e.message : String(e)}`,
+    });
   }
+  // Non-OK response — role-aware message (401 → token rejected, 403 → admin-only,
+  // …), identical shaping to brain_capture / brain_transition. Never return empty.
+  if (!res.ok) return errorResult(res);
+  const body = (await res.json()) as {
+    hits?: Array<{
+      citation?: string;
+      snippet?: string;
+      score?: number;
+      title?: string;
+      collection?: string;
+    }>;
+  };
+  const results: CitedHit[] = (body.hits ?? [])
+    .filter((h) => typeof h.citation === 'string' && h.citation.length > 0)
+    .map((h) => ({
+      citation: h.citation as string,
+      snippet: typeof h.snippet === 'string' ? h.snippet : '',
+      score: typeof h.score === 'number' ? h.score : 0,
+      title: h.title,
+      collection: h.collection,
+    }));
+  return jsonResult({ source: 'brain-api', query, scope, count: results.length, results });
+}
+
+/**
+ * team-mode connectivity probe. Calls the brain's health route (GET /api/health,
+ * auth-exempt server-side) so a teammate can answer "am I connected, in team
+ * mode, with a token?" without touching any brain data. Read-only.
+ */
+export async function status(): Promise<ReturnType<typeof jsonResult>> {
+  const tokenSet = API_TOKEN !== undefined && API_TOKEN !== '';
+  if (API_URL === undefined || API_URL === '') {
+    return jsonResult({
+      mode: 'team',
+      apiUrl: null,
+      tokenSet,
+      healthy: false,
+      version: null,
+      error: 'unconfigured — set TEAMKB_API_URL to your team brain',
+    });
+  }
+  const apiUrl = API_URL.replace(/\/+$/, '');
+  let res: Response;
+  try {
+    res = await fetch(`${apiUrl}/api/health`, { method: 'GET' });
+  } catch (e) {
+    return jsonResult({
+      mode: 'team',
+      apiUrl,
+      tokenSet,
+      healthy: false,
+      version: null,
+      error: `could not reach the brain API: ${e instanceof Error ? e.message : String(e)}`,
+    });
+  }
+  let version: string | null = null;
+  try {
+    const b = (await res.json()) as { version?: unknown };
+    if (typeof b.version === 'string') version = b.version;
+  } catch {
+    version = null;
+  }
+  // healthy tracks the HTTP status: the health route replies 200 healthy / 503 degraded.
+  return jsonResult({ mode: 'team', apiUrl, tokenSet, healthy: res.ok, version });
 }
 
 const server = new McpServer({ name: 'governed-brain', version: VERSION });
@@ -152,10 +209,14 @@ server.tool(
       .optional()
       .describe('Maximum number of cited hits to return (default 10)'),
   },
-  async (params) => {
-    const result = await search(params.query, params.scope ?? 'curated', params.limit ?? 10);
-    return { content: [{ type: 'text' as const, text: JSON.stringify(result, null, 2) }] };
-  },
+  async (params) => search(params.query, params.scope ?? 'curated', params.limit ?? 10),
+);
+
+server.tool(
+  'brain_status',
+  'Check your connection to the team brain: are you in team mode, is TEAMKB_API_URL reachable, and is a per-user token set? Calls the brain\'s health probe (no auth) and reports { mode, apiUrl, tokenSet, healthy, version }. Read-only — no query, touches no data.',
+  {},
+  async () => status(),
 );
 
 // ─── WRITE (team mode: member proposes, the server disposes) ──────────────────
