@@ -5,5 +5,7 @@ node_modules/
 *.tsbuildinfo
 .gsb-smoke/
 .gsb-repro/
+# vitest coverage output (the lcov floor is enforced in-run; the report is transient)
+coverage/
 # transient esbuild output from scripts/anchor-on-transition.test.mjs (cleaned in after())
 scripts/.anchor-helper-*/

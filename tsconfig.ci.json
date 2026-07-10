@@ -1,0 +1,5 @@
+{
+  "//": "CI typecheck scope: only the modules that build WITHOUT the private sibling monorepo (@qmd-team-intent-kb/*). The full `tsc --noEmit` (tsconfig.json) still typechecks every src file locally and in smoke, where the workspace links resolve. This partial gate keeps type errors in the dispatch predicate + the team proxy caught in plain CI.",
+  "extends": "./tsconfig.json",
+  "include": ["src/mode.ts", "src/remote-server.ts"]
+}

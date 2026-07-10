@@ -1,0 +1,12 @@
+# Extra hash-pin patterns for @intentsolutions/audit-harness (additive).
+#
+# The gate configs: a byte change to any of these weakens the wall, so pin them —
+# silently lowering the coverage floor, disabling a lint rule, narrowing the CI
+# typecheck scope, or gutting the CI workflow becomes a HARNESS_TAMPERED failure
+# (audit-harness verify, exit 2) instead of a quiet slip. After a *reviewed* edit,
+# re-pin with `pnpm exec audit-harness init`.
+vitest.config.ts
+eslint.config.mjs
+tsconfig.ci.json
+.github/workflows/ci.yml
+tests/TESTING.md
