@@ -17,6 +17,7 @@
 import esbuild from 'esbuild';
 import { createRequire } from 'node:module';
 import { dirname } from 'node:path';
+import { execSync } from 'node:child_process';
 
 const require = createRequire(import.meta.url);
 
@@ -40,3 +41,17 @@ await esbuild.build({
 });
 
 console.error('✓ bundled → plugin-runtime/governed-brain.cjs');
+
+// Install the externalized native modules INTO plugin-runtime/node_modules so the
+// runtime is SELF-CONTAINED. The three externals (better-sqlite3 + its 'bindings'
+// loader, and fs-ext) ship compiled .node addons that esbuild cannot inline; if the
+// runtime relies on the repo's parent node_modules, a copied/marketplace plugin-runtime/
+// (no parent) fails in LOCAL mode with "better-sqlite3 not built for this machine".
+// Installing here builds them for the current host ABI and makes the folder portable.
+// (TEAM mode never imports sqlite, so this only matters for local/personal-brain use.)
+console.error('→ installing self-contained runtime natives (plugin-runtime)…');
+execSync('npm install --omit=dev --no-audit --no-fund --loglevel=error', {
+  cwd: 'plugin-runtime',
+  stdio: 'inherit',
+});
+console.error('✓ plugin-runtime is self-contained (better-sqlite3, bindings, fs-ext)');
