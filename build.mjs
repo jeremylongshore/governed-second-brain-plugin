@@ -50,8 +50,19 @@ console.error('✓ bundled → plugin-runtime/governed-brain.cjs');
 // Installing here builds them for the current host ABI and makes the folder portable.
 // (TEAM mode never imports sqlite, so this only matters for local/personal-brain use.)
 console.error('→ installing self-contained runtime natives (plugin-runtime)…');
-execSync('npm install --omit=dev --no-audit --no-fund --loglevel=error', {
-  cwd: 'plugin-runtime',
-  stdio: 'inherit',
-});
+try {
+  execSync('npm install --omit=dev --no-audit --no-fund --loglevel=error', {
+    cwd: 'plugin-runtime',
+    stdio: 'inherit',
+  });
+} catch {
+  // better-sqlite3/fs-ext ship prebuilt binaries for common platforms; if none
+  // matched, npm falls back to compiling from source (node-gyp) — which needs
+  // system build tools. Fail with an actionable message instead of a raw stack.
+  console.error('\n❌ Failed to install/compile plugin-runtime native deps (better-sqlite3, fs-ext).');
+  console.error('   If no prebuilt binary matched this platform, building from source needs system');
+  console.error('   build tools (Python, make, a C/C++ compiler, or VS Build Tools). Install them and');
+  console.error('   re-run `npm run build`.');
+  process.exit(1);
+}
 console.error('✓ plugin-runtime is self-contained (better-sqlite3, bindings, fs-ext)');
