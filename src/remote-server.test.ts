@@ -79,7 +79,7 @@ describe('authHeaders — the one auth surface', () => {
   });
 });
 
-describe('search — proxy to the team brain', () => {
+describe('search — proxy to the team brain (errors are SURFACED, never swallowed)', () => {
   it('returns cited hits and drops citation-less entries', async () => {
     const { search } = await load({ TEAMKB_API_URL: 'http://brain:3847' });
     vi.stubGlobal(
@@ -98,10 +98,12 @@ describe('search — proxy to the team brain', () => {
           ),
       ),
     );
-    const out = await search('q', 'curated', 10);
-    expect(out.source).toBe('brain-api');
-    expect(out.count).toBe(2);
-    expect(out.results[0]).toEqual({
+    // search now returns the MCP jsonResult wrapper — unwrap the happy-path payload.
+    const out = payload(await search('q', 'curated', 10));
+    expect(out['source']).toBe('brain-api');
+    expect(out['count']).toBe(2);
+    const results = out['results'] as Array<Record<string, unknown>>;
+    expect(results[0]).toEqual({
       citation: 'qmd://a',
       snippet: 'A',
       score: 0.9,
@@ -109,21 +111,23 @@ describe('search — proxy to the team brain', () => {
       collection: 'c',
     });
     // The sparse hit keeps its citation and gets safe defaults for the rest.
-    expect(out.results[1]).toMatchObject({ citation: 'qmd://b', snippet: '', score: 0 });
+    expect(results[1]).toMatchObject({ citation: 'qmd://b', snippet: '', score: 0 });
   });
 
-  it('reports source=unconfigured (not an error) when TEAMKB_API_URL is unset', async () => {
+  // R4 fix (was a characterization gate for the old swallow): search now SURFACES
+  // the unconfigured / transport / non-OK cases as a distinct, visible error
+  // instead of a silent count:0 that reads like "the brain has nothing for you".
+  it('surfaces a visible error (not source=unconfigured) when TEAMKB_API_URL is unset', async () => {
     const { search } = await load({ TEAMKB_API_URL: undefined });
-    const out = await search('q', 'curated', 10);
-    expect(out.source).toBe('unconfigured');
-    expect(out.count).toBe(0);
+    const out = payload(await search('q', 'curated', 10));
+    expect(out['ok']).toBe(false);
+    expect(String(out['error'])).toContain('unconfigured');
+    // The failure must NOT masquerade as a successful empty search.
+    expect(out['count']).toBeUndefined();
+    expect(out['results']).toBeUndefined();
   });
 
-  // Characterization gate: search currently SWALLOWS transport + non-OK errors
-  // into an empty result — the R4/R8 gap the review flagged (a failed search is
-  // indistinguishable from "no hits"). Pinned here so that when brain_search grows
-  // real error-surfacing, the behaviour change is a visible, reviewed diff.
-  it('swallows a network error into an empty result (documents the R4/R8 gap)', async () => {
+  it('surfaces a network error (dead API / off-tailnet), never a silent empty result', async () => {
     const { search } = await load({ TEAMKB_API_URL: 'http://brain:3847' });
     vi.stubGlobal(
       'fetch',
@@ -131,15 +135,22 @@ describe('search — proxy to the team brain', () => {
         throw new Error('ECONNREFUSED');
       }),
     );
-    const out = await search('q', 'all', 5);
-    expect(out).toEqual({ source: 'brain-api', query: 'q', scope: 'all', count: 0, results: [] });
+    const out = payload(await search('q', 'all', 5));
+    expect(out['ok']).toBe(false);
+    expect(String(out['error'])).toContain('could not reach the brain API');
+    expect(String(out['error'])).toContain('ECONNREFUSED');
+    expect(out['count']).toBeUndefined();
+    expect(out['results']).toBeUndefined();
   });
 
-  it('swallows a non-OK (500) response into an empty result (documents the R4/R8 gap)', async () => {
+  it('surfaces a non-OK (500) response as a role-aware error, never a silent empty result', async () => {
     const { search } = await load({ TEAMKB_API_URL: 'http://brain:3847' });
     vi.stubGlobal('fetch', vi.fn(async () => new Response('err', { status: 500 })));
-    const out = await search('q', 'curated', 10);
-    expect(out.count).toBe(0);
-    expect(out.results).toEqual([]);
+    const out = payload(await search('q', 'curated', 10));
+    expect(out['ok']).toBe(false);
+    expect(out['status']).toBe(500);
+    expect(String(out['error'])).toBe('request failed (500): err');
+    expect(out['count']).toBeUndefined();
+    expect(out['results']).toBeUndefined();
   });
 });
