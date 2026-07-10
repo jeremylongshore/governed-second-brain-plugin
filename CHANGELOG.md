@@ -8,6 +8,18 @@ installable Claude Code + Cowork plugin (a local stdio MCP server); the engines 
 
 ## [Unreleased]
 
+### Fixed
+
+- **`plugin-runtime/` is now self-contained.** Added `plugin-runtime/package.json` and a `build.mjs`
+  postbuild step that installs the externalized native modules (`better-sqlite3`, `bindings`,
+  `fs-ext`) into `plugin-runtime/node_modules`. Previously a copied / marketplace `plugin-runtime/`
+  had no `better-sqlite3` and **local mode** failed with `better-sqlite3 not built for this machine`
+  (`brain_status` returned `total: 0`); it only worked in-repo by resolving `require()` upward to the
+  parent `node_modules`. **Team mode was unaffected** (the mode dispatcher never imports sqlite), and
+  the npm-publish path was already fine (deps declared). Verified by running the runtime from an
+  isolated copy with no ancestor `node_modules` → `brain_status total: 2189`. (#22, bead
+  `compile-then-govern-jfv.6.18`)
+
 ## [1.0.0] - 2026-06-20
 
 ### Added
