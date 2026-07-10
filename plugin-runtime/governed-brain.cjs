@@ -41221,7 +41221,11 @@ var init_anchor = __esm({
 // src/write-lock.ts
 function tryFlockExclusive(fd) {
   return new Promise((resolve3) => {
-    (0, import_fs_ext.flock)(fd, "exnb", (err2) => resolve3(err2 ?? null));
+    try {
+      (0, import_fs_ext.flock)(fd, "exnb", (err2) => resolve3(err2 ?? null));
+    } catch (e) {
+      resolve3(e);
+    }
   });
 }
 function isContention(err2) {

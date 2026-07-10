@@ -53,10 +53,22 @@ export interface WriteLockHandle {
   release(): void;
 }
 
-/** Promise wrapper over the async, non-blocking `flock(fd, 'exnb')`. */
+/**
+ * Promise wrapper over the async, non-blocking `flock(fd, 'exnb')`. It NEVER
+ * rejects: a synchronous throw from the native `flock` (e.g. an fs-ext native
+ * load/runtime failure) is caught and resolved AS the error, so it flows into
+ * `acquireWriteLock`'s non-contention "real error" branch — which closes the fd
+ * and rethrows. If this rejected instead, the `for(;;)` acquire loop would not
+ * catch it and the `openSync`'d fd would LEAK (and the caller could not tell a
+ * lock failure from success — the whole point of the lock is to fail closed).
+ */
 function tryFlockExclusive(fd: number): Promise<NodeJS.ErrnoException | null> {
   return new Promise((resolve) => {
-    flock(fd, 'exnb', (err) => resolve(err ?? null));
+    try {
+      flock(fd, 'exnb', (err) => resolve(err ?? null));
+    } catch (e) {
+      resolve(e as NodeJS.ErrnoException);
+    }
   });
 }
 

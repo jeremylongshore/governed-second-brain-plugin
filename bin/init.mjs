@@ -122,7 +122,16 @@ const NATIVE_DEPS = [
 
 function ensureNativeDep() {
   const require = createRequire(RUNTIME);
-  const deps = JSON.parse(readFileSync(join(PLUGIN_ROOT, 'package.json'), 'utf8')).dependencies || {};
+  // Read the version each native dep was built against from package.json, but
+  // NEVER let a missing/malformed package.json crash init — degrade to each dep's
+  // fallbackVer below. (The pre-R9 code read this inside a per-dep try/catch;
+  // hoisting it must keep that fail-safe.)
+  let deps = {};
+  try {
+    deps = JSON.parse(readFileSync(join(PLUGIN_ROOT, 'package.json'), 'utf8')).dependencies || {};
+  } catch {
+    /* missing/unreadable/malformed package.json — fall back to fallbackVer */
+  }
   for (const { name, fallbackVer, addonRel } of NATIVE_DEPS) {
     // Already resolvable from the runtime (e.g. npx-installed it as a dependency)? Done.
     try { require.resolve(name); continue; } catch {}
