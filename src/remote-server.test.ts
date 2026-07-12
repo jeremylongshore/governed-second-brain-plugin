@@ -1,4 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { mkdtempSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 
 /**
  * Team-mode remote proxy — the error-surfacing the 6-engineer review flagged.
@@ -311,5 +314,118 @@ describe('brain_inbox / brain_approve / brain_reject — the admin review surfac
     // The 2xx means it was promoted — don't turn that into an error over a bad body.
     expect(out['ok']).toBe(true);
     expect(out['memoryId']).toBeUndefined();
+  });
+});
+
+describe('capture — idempotency + durable outbox (jfv.9)', () => {
+  const boxes = [];
+  const mkbox = () => {
+    const d = mkdtempSync(join(tmpdir(), 'gsb-outbox-'));
+    boxes.push(d);
+    return d;
+  };
+  afterEach(() => {
+    for (const d of boxes.splice(0)) rmSync(d, { recursive: true, force: true });
+  });
+
+  it('deriveCandidateId is a deterministic, valid UUIDv5 — same input → same id, different content → different', async () => {
+    const { deriveCandidateId } = await load();
+    const a = deriveCandidateId('t', 'Title', 'the body');
+    const b = deriveCandidateId('t', 'Title', 'the body');
+    const c = deriveCandidateId('t', 'Title', 'a different body');
+    expect(a).toBe(b); // idempotent
+    expect(a).not.toBe(c); // content-sensitive
+    expect(a).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-5[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/);
+  });
+
+  it('capture derives the SAME candidateId for the same proposal (no duplicate rows on retry)', async () => {
+    const { capture } = await load({ TEAMKB_API_URL: 'http://brain:3847', TEAMKB_TENANT_ID: 't1' });
+    vi.stubGlobal('fetch', vi.fn(async () => new Response('{}', { status: 201 })));
+    const one = payload(await capture('T', 'same content here', undefined, undefined));
+    const two = payload(await capture('T', 'same content here', undefined, undefined));
+    expect(one['candidateId']).toBe(two['candidateId']);
+  });
+
+  it('queues to the durable outbox on a network throw (never drops), reports queued not error', async () => {
+    const box = mkbox();
+    const { capture } = await load({ TEAMKB_API_URL: 'http://brain:3847', TEAMKB_OUTBOX_DIR: box });
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => {
+        throw new Error('ECONNREFUSED');
+      }),
+    );
+    const out = payload(await capture('Title', 'a proposal made while offline', undefined, undefined));
+    expect(out['ok']).toBe(true);
+    expect(out['queued']).toBe(true);
+    // A file was written to the outbox, named by the (deterministic) candidate id.
+    const files = readdirSync(box);
+    expect(files).toEqual([`${out['candidateId']}.json`]);
+  });
+
+  it('queues on a 5xx (transient) but NOT on a 4xx (real rejection surfaces)', async () => {
+    const box = mkbox();
+    const { capture } = await load({ TEAMKB_API_URL: 'http://brain:3847', TEAMKB_OUTBOX_DIR: box });
+    // 5xx → queued.
+    vi.stubGlobal('fetch', vi.fn(async () => new Response('boom', { status: 503 })));
+    const q = payload(await capture('T', 'server was down', undefined, undefined));
+    expect(q['queued']).toBe(true);
+    expect(readdirSync(box).length).toBe(1);
+    // 4xx → surfaced, nothing queued.
+    vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify({ error: 'bad' }), { status: 422 })));
+    const r = payload(await capture('T', 'invalid proposal', undefined, undefined));
+    expect(r['ok']).toBe(false);
+    expect(r['status']).toBe(422);
+    expect(readdirSync(box).length).toBe(1); // unchanged — the 422 was not queued
+  });
+
+  it('drains previously-queued proposals on the next successful capture', async () => {
+    const box = mkbox();
+    // Seed one already-queued candidate file (as if a prior offline capture).
+    writeFileSync(join(box, 'queued-1.json'), JSON.stringify({ id: 'queued-1', content: 'earlier', tenantId: 't1' }));
+    const { capture } = await load({ TEAMKB_API_URL: 'http://brain:3847', TEAMKB_OUTBOX_DIR: box });
+    const calls = [];
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (_url, init) => {
+        calls.push(JSON.parse(init.body));
+        return new Response('{}', { status: 201 });
+      }),
+    );
+    const out = payload(await capture('New', 'a fresh online proposal', undefined, undefined));
+    expect(out['ok']).toBe(true);
+    expect(out['outboxDrained']).toBe(1); // the queued one was delivered
+    expect(readdirSync(box).length).toBe(0); // outbox is now empty
+    // Both the new capture AND the drained backlog hit the API.
+    expect(calls.some((c) => c.id === 'queued-1')).toBe(true);
+  });
+
+  it('drainOutbox stops (keeps the backlog) while the API is still down', async () => {
+    const box = mkbox();
+    writeFileSync(join(box, 'q1.json'), JSON.stringify({ id: 'q1', content: 'x' }));
+    const { drainOutbox } = await load({ TEAMKB_API_URL: 'http://brain:3847', TEAMKB_OUTBOX_DIR: box });
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => {
+        throw new Error('still down');
+      }),
+    );
+    const n = await drainOutbox();
+    expect(n).toBe(0);
+    expect(readdirSync(box).length).toBe(1); // kept for a later drain
+  });
+
+  it('drainOutbox KEEPS a queued item on a transient 429 (rate-limited), drops on a permanent 4xx', async () => {
+    const box = mkbox();
+    writeFileSync(join(box, 'q1.json'), JSON.stringify({ id: 'q1', content: 'x' }));
+    const { drainOutbox } = await load({ TEAMKB_API_URL: 'http://brain:3847', TEAMKB_OUTBOX_DIR: box });
+    // 429 = transient → keep it queued (a rate-limit is not a permanent reject).
+    vi.stubGlobal('fetch', vi.fn(async () => new Response('slow down', { status: 429 })));
+    expect(await drainOutbox()).toBe(0);
+    expect(readdirSync(box).length).toBe(1);
+    // 422 = permanent reject → drop it (it will never succeed).
+    vi.stubGlobal('fetch', vi.fn(async () => new Response('bad', { status: 422 })));
+    expect(await drainOutbox()).toBe(1);
+    expect(readdirSync(box).length).toBe(0);
   });
 });
