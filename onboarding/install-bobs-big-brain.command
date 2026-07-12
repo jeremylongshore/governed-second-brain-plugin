@@ -99,21 +99,21 @@ chmod 600 "$tmp"
 mv -f "$tmp" "$TEAM_JSON"
 green "  ✓ Saved to $TEAM_JSON"
 
-# 4) Install the plugin (skills + tools). Needs the private team marketplace, which
-#    needs your intent-solutions-io GitHub membership + a logged-in claude/gh. If it
-#    can't complete, your connection is already saved — the brain works the moment
-#    the plugin is installed by any path.
+# 4) Install the plugin (skills + tools) from the PUBLIC plugin repo — it is its own
+#    marketplace, so NO private-repo access, GitHub org membership, or gh login is
+#    needed; anyone can install it. If it can't complete, your connection is already
+#    saved — the brain works the moment the plugin is installed by any path.
 say ""
 say "  4) Installing the Bob's Big Brain plugin…"
 if command -v claude >/dev/null 2>&1; then
-  claude plugin marketplace add intent-solutions-io/team-intent-claude-plugins >/dev/null 2>&1 || true
-  if claude plugin install governed-second-brain@intent-solutions-io >/dev/null 2>&1; then
+  claude plugin marketplace add jeremylongshore/governed-second-brain-plugin >/dev/null 2>&1 || true
+  if claude plugin install governed-second-brain@governed-second-brain >/dev/null 2>&1; then
     green "  ✓ Plugin installed."
   else
-    say "  • Couldn't auto-install the plugin (usually GitHub access). Your connection is"
-    say "    saved. In Claude Code you can finish it yourself with these two commands:"
-    say "        /plugin marketplace add intent-solutions-io/team-intent-claude-plugins"
-    say "        /plugin install governed-second-brain@intent-solutions-io"
+    say "  • Couldn't auto-install the plugin. Your connection is already saved. In"
+    say "    Claude Code you can finish it yourself with these two commands:"
+    say "        /plugin marketplace add jeremylongshore/governed-second-brain-plugin"
+    say "        /plugin install governed-second-brain@governed-second-brain"
     say "    …or ask Jeremy to finish it."
   fi
 else

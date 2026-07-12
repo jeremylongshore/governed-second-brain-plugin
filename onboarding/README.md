@@ -43,10 +43,14 @@ message — it does *not* silently fall back to the local brain. A teammate who 
 
 ## For the admin (Jeremy)
 
-- **Merge-gated — do not distribute the `.command` until this change is on `main`.** The private
-  marketplace (`intent-solutions-io/team-intent-claude-plugins`) tracks this repo's `main` branch
-  unpinned, so `claude plugin install` pulls the `main` bundle. The `team.json` fallback only exists
-  once this PR merges; hand out the installer *after* that.
+- **Auth-free install.** The installer adds **this public repo as its own marketplace**
+  (`claude plugin marketplace add jeremylongshore/governed-second-brain-plugin` →
+  `claude plugin install governed-second-brain@governed-second-brain`), so a teammate needs **no**
+  `intent-solutions-io` org membership, no private-repo access, and no `gh` login — the earlier
+  "repository not found" Prereq-0 is gone.
+- **Merge-gated.** The marketplace source tracks this repo's `main` branch unpinned, so
+  `claude plugin install` pulls the `main` bundle — only distribute the `.command` after the
+  behaviour it depends on is merged to `main`.
 - Mint the per-user token, then hand the teammate **the token and this `.command`
   over the same trusted channel** (email/DM). You may pre-fill `TOKEN=` and `NAME=`
   at the top of the `.command` so they *only* double-click — but leaving `TOKEN`
