@@ -37,7 +37,7 @@ import { runGovern } from './govern.js';
 import { anchorChainHead } from './anchor.js';
 import { acquireWriteLock, WriteLockBusyError } from './write-lock.js';
 
-const VERSION = '1.0.0';
+const VERSION = '1.1.0';
 const config = resolveConfig();
 
 const CATEGORIES = [

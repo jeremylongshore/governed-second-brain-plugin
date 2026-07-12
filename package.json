@@ -1,6 +1,6 @@
 {
   "name": "governed-second-brain",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Governed second brain — a Claude Code + Cowork plugin + installer. ONE plugin, two modes: local (default) turns your own files into cited (qmd://) memory with deterministic governance and a tamper-evident hash-chained audit trail, in-process with no network; team (set TEAMKB_API_URL) queries your team's single governed brain over the tailnet.",
   "keywords": [
     "mcp",

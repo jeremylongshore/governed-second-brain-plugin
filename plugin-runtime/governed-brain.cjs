@@ -35633,7 +35633,7 @@ var init_remote_server = __esm({
     init_mcp();
     init_stdio2();
     import_zod2 = __toESM(require_zod(), 1);
-    VERSION = "1.0.0";
+    VERSION = "1.1.0";
     API_URL = process.env["TEAMKB_API_URL"];
     API_TOKEN = process.env["TEAMKB_API_TOKEN"];
     TENANT_ID = process.env["TEAMKB_TENANT_ID"]?.trim() || "intent-solutions";
@@ -41733,7 +41733,7 @@ var init_local_server = __esm({
     init_govern();
     init_anchor();
     init_write_lock();
-    VERSION2 = "1.0.0";
+    VERSION2 = "1.1.0";
     config = resolveConfig();
     CATEGORIES2 = [
       "decision",

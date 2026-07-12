@@ -105,8 +105,11 @@ if command -v claude >/dev/null 2>&1; then
   if claude plugin install governed-second-brain@intent-solutions-io >/dev/null 2>&1; then
     green "  ✓ Plugin installed."
   else
-    say "  • Couldn't auto-install the plugin (usually GitHub access). Your connection"
-    say "    is saved — ask Jeremy to finish the plugin install and you're set."
+    say "  • Couldn't auto-install the plugin (usually GitHub access). Your connection is"
+    say "    saved. In Claude Code you can finish it yourself with these two commands:"
+    say "        /plugin marketplace add intent-solutions-io/team-intent-claude-plugins"
+    say "        /plugin install governed-second-brain@intent-solutions-io"
+    say "    …or ask Jeremy to finish it."
   fi
 else
   say "  • The 'claude' command isn't on your PATH yet. Install Claude Code, then"

@@ -25,7 +25,7 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { z } from 'zod';
 
-const VERSION = '1.0.0';
+const VERSION = '1.1.0';
 const API_URL = process.env['TEAMKB_API_URL'];
 const API_TOKEN = process.env['TEAMKB_API_TOKEN'];
 // The team brain's tenant. Defaults to the real shared tenant; an env override

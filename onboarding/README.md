@@ -43,6 +43,10 @@ message — it does *not* silently fall back to the local brain. A teammate who 
 
 ## For the admin (Jeremy)
 
+- **Merge-gated — do not distribute the `.command` until this change is on `main`.** The private
+  marketplace (`intent-solutions-io/team-intent-claude-plugins`) tracks this repo's `main` branch
+  unpinned, so `claude plugin install` pulls the `main` bundle. The `team.json` fallback only exists
+  once this PR merges; hand out the installer *after* that.
 - Mint the per-user token, then hand the teammate **the token and this `.command`
   over the same trusted channel** (email/DM). You may pre-fill `TOKEN=` and `NAME=`
   at the top of the `.command` so they *only* double-click — but leaving `TOKEN`

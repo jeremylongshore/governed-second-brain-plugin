@@ -8,6 +8,32 @@ installable Claude Code + Cowork plugin (a local stdio MCP server); the engines 
 
 ## [Unreleased]
 
+## [1.1.0] - 2026-07-11
+
+### Added
+
+- **`~/.teamkb/team.json` config-file fallback for team mode.** `src/index.ts` now fills any absent
+  `TEAMKB_API_URL` / `TEAMKB_API_TOKEN` / `TEAMKB_TENANT_ID` from a `team.json` on disk **before**
+  mode dispatch, so a GUI/Dock-launched Claude (which never sources `~/.zshrc`) reaches team mode
+  without shell env vars. Precedence: real env → `team.json` → local. New `src/team-config.ts`.
+- **Fail-closed mode resolution.** A present-but-unusable `team.json` — group/world-readable,
+  unreadable, invalid JSON, non-object, or missing a usable `apiUrl` (e.g. a snake_case `api_url`
+  typo) — makes the plugin **refuse to start** with a clear message instead of silently running the
+  empty local brain. A genuinely-empty environment still runs local (the public showcase).
+- **`onboarding/install-bobs-big-brain.command`** — a readable, double-clickable macOS installer:
+  checks tailnet reachability, takes the token via a hidden prompt (never argv/history), writes
+  `team.json` at mode `600`, and installs the plugin from the private marketplace.
+- **`smoke/mode-dispatch.test.mjs`** — drives the shipped bundle through all four dispatch /
+  fail-closed paths (loose-perms → refuse; valid 0600 + no env → team; no file → local; snake_case →
+  refuse). Wired into the smoke workflow.
+
+### Security
+
+- The team bearer token now lives only in `~/.teamkb/team.json` (mode `600`) — never in
+  `~/.claude.json`, shell history, argv, or a chat transcript. The plugin refuses to load a
+  group/world-readable `team.json`, and a malformed-`team.json` error is content-free so no token
+  fragment can reach the MCP debug log.
+
 ### Fixed
 
 - **`plugin-runtime/` is now self-contained.** Added `plugin-runtime/package.json` and a `build.mjs`
