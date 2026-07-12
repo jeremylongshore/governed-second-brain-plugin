@@ -42071,8 +42071,14 @@ function loadTeamConfig(env = process.env) {
   const obj = parsed;
   const config2 = {};
   for (const key of Object.keys(KEY_TO_ENV)) {
+    if (!(key in obj)) continue;
     const v = obj[key];
-    if (typeof v === "string" && v.trim() !== "") config2[key] = v.trim();
+    if (typeof v !== "string" || v.trim() === "") {
+      throw new TeamConfigError(
+        `${path}: "${key}" must be a non-empty string. Fix the value, or remove the key.`
+      );
+    }
+    config2[key] = v.trim();
   }
   if (config2.apiUrl === void 0) {
     const found = Object.keys(obj);
@@ -42118,6 +42124,13 @@ async function main() {
     );
   }
   const { mode } = resolveMode(process.env["TEAMKB_API_URL"]);
+  if (mode === "team" && !isConfigured(process.env["TEAMKB_API_TOKEN"])) {
+    process.stderr.write(
+      `[governed-brain] REFUSING TO START \u2014 team mode is configured (TEAMKB_API_URL is set) but no TEAMKB_API_TOKEN is available. Set your per-user token in ${teamConfigPath(process.env)} (the "apiToken" field) or the environment. Refusing to run team mode without a token.
+`
+    );
+    process.exit(1);
+  }
   if (mode === "team") {
     const { startRemoteServer: startRemoteServer2 } = await Promise.resolve().then(() => (init_remote_server(), remote_server_exports));
     await startRemoteServer2();

@@ -20,7 +20,7 @@
  * work identically in either mode.
  */
 
-import { resolveMode } from './mode.js';
+import { isConfigured, resolveMode } from './mode.js';
 import { applyTeamConfig, loadTeamConfig, teamConfigPath, TeamConfigError } from './team-config.js';
 
 async function main(): Promise<void> {
@@ -54,6 +54,19 @@ async function main(): Promise<void> {
   // both mean local mode. The exact predicate lives in (and is unit-tested through)
   // src/mode.ts.
   const { mode } = resolveMode(process.env['TEAMKB_API_URL']);
+
+  // Fail-closed on a token-less team config: team mode is authenticated (the brain API
+  // 401s without a bearer), so a URL with no token can only ever produce rejected
+  // requests. Refuse at startup with a clear message rather than boot into a mode that
+  // is guaranteed to 401 on the first call.
+  if (mode === 'team' && !isConfigured(process.env['TEAMKB_API_TOKEN'])) {
+    process.stderr.write(
+      `[governed-brain] REFUSING TO START — team mode is configured (TEAMKB_API_URL is set) but no ` +
+        `TEAMKB_API_TOKEN is available. Set your per-user token in ${teamConfigPath(process.env)} ` +
+        `(the "apiToken" field) or the environment. Refusing to run team mode without a token.\n`,
+    );
+    process.exit(1);
+  }
 
   if (mode === 'team') {
     // Team mode — remote proxy over the tailnet.

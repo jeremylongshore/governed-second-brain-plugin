@@ -100,3 +100,12 @@ test('fail-closed: a snake_case api_url (no camelCase apiUrl) REFUSES — the si
     assert.equal(code, 1, `expected exit 1, got ${code}. stderr:\n${stderr}`);
     assert.match(stderr, /no usable "apiUrl"/);
   }));
+
+test('fail-closed: team mode (apiUrl set) with NO token anywhere REFUSES (would only 401)', () =>
+  withBase(async (base) => {
+    // apiUrl-only file → team mode; env token is empty → no token at all.
+    writeTeam(base, { apiUrl: 'http://127.0.0.1:3847' }, 0o600);
+    const { code, stderr } = await runBundle(base, { expectBoot: false });
+    assert.equal(code, 1, `expected exit 1, got ${code}. stderr:\n${stderr}`);
+    assert.match(stderr, /TEAMKB_API_TOKEN|without a token/);
+  }));

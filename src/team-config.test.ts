@@ -123,15 +123,24 @@ describe('loadTeamConfig — presence + fail-closed', () => {
     expect(() => loadTeamConfig(env())).toThrow(/no usable "apiUrl"/);
   });
 
-  it('REFUSES a whitespace-only apiUrl (no usable value)', () => {
+  it('REFUSES a whitespace-only apiUrl (present but empty is a mistake, not "unset")', () => {
     writeTeamJson(JSON.stringify({ apiUrl: '   ', tenantId: 'x' }), 0o600);
-    expect(() => loadTeamConfig(env())).toThrow(/no usable "apiUrl"/);
+    expect(() => loadTeamConfig(env())).toThrow(/"apiUrl" must be a non-empty string/);
   });
 
-  it('accepts a valid apiUrl and ignores non-string / empty OTHER fields', () => {
-    writeTeamJson(JSON.stringify({ apiUrl: 'http://brain:3847', apiToken: 42, tenantId: '  ' }), 0o600);
-    const r = loadTeamConfig(env());
-    expect(r.config).toEqual({ apiUrl: 'http://brain:3847' });
+  it('REFUSES a present-but-numeric apiToken (fail-closed, not silently ignored)', () => {
+    writeTeamJson(JSON.stringify({ apiUrl: 'http://brain:3847', apiToken: 42 }), 0o600);
+    expect(() => loadTeamConfig(env())).toThrow(/"apiToken" must be a non-empty string/);
+  });
+
+  it('REFUSES a present-but-empty tenantId', () => {
+    writeTeamJson(JSON.stringify({ apiUrl: 'http://brain:3847', tenantId: '' }), 0o600);
+    expect(() => loadTeamConfig(env())).toThrow(/"tenantId" must be a non-empty string/);
+  });
+
+  it('accepts a file with only a valid apiUrl (other keys absent — may come from env)', () => {
+    writeTeamJson(JSON.stringify({ apiUrl: 'http://brain:3847' }), 0o600);
+    expect(loadTeamConfig(env()).config).toEqual({ apiUrl: 'http://brain:3847' });
   });
 
   it('trims string field values', () => {

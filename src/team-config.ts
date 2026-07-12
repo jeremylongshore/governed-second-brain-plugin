@@ -132,8 +132,17 @@ export function loadTeamConfig(env: NodeJS.ProcessEnv = process.env): TeamConfig
   const obj = parsed as Record<string, unknown>;
   const config: TeamConfig = {};
   for (const key of Object.keys(KEY_TO_ENV) as TeamConfigKey[]) {
+    if (!(key in obj)) continue; // absent is fine — the value may come from env, or be optional
+    // Present-but-invalid (wrong type, empty, or whitespace-only) is a MISTAKE, not an
+    // absent value: fail closed with a precise message instead of silently coercing it
+    // to "unset" and risking a wrong-mode boot.
     const v = obj[key];
-    if (typeof v === 'string' && v.trim() !== '') config[key] = v.trim();
+    if (typeof v !== 'string' || v.trim() === '') {
+      throw new TeamConfigError(
+        `${path}: "${key}" must be a non-empty string. Fix the value, or remove the key.`,
+      );
+    }
+    config[key] = v.trim();
   }
   // A present team.json exists to enter TEAM mode, which is keyed on apiUrl. A file
   // with no usable apiUrl — an empty object, snake_case `api_url`, a typo, or only

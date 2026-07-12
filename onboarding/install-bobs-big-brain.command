@@ -83,10 +83,15 @@ say "  3) Saving your connection (owner-only, mode 600)…"
 mkdir -p "$TEAMKB_DIR"
 umask 077
 tmp="$(mktemp "$TEAMKB_DIR/.team.json.XXXXXX")"
+# JSON-escape the token before embedding it in the string literal: a backslash or a
+# double quote in the pasted value would otherwise produce malformed JSON, which the
+# plugin now (correctly) refuses to load. Escape backslashes first, then quotes.
+esc_token=${TOKEN//\\/\\\\}
+esc_token=${esc_token//\"/\\\"}
 cat > "$tmp" <<JSON
 {
   "apiUrl": "$API_URL",
-  "apiToken": "$TOKEN",
+  "apiToken": "$esc_token",
   "tenantId": "$TENANT_ID"
 }
 JSON
