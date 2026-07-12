@@ -266,7 +266,7 @@ function sweepInbox(config: BrainConfig, deps: SweepDeps): SweepResult {
     try {
       // Member-quarantine gate: a member's proposal must NOT auto-promote.
       if (isMemberAuthored(candidate)) {
-        candidateRepo.updateStatus(candidate.id, 'quarantined');
+        candidateRepo.updateStatus(candidate.id, 'quarantined', config.tenantId);
         res.quarantined++;
         outcomes.push({ candidateId: candidate.id, outcome: 'quarantined' });
         continue;
@@ -275,13 +275,13 @@ function sweepInbox(config: BrainConfig, deps: SweepDeps): SweepResult {
       const result = curator.processSingle(candidate, existingHashes);
       switch (result.outcome) {
         case 'promoted':
-          candidateRepo.updateStatus(candidate.id, 'promoted');
+          candidateRepo.updateStatus(candidate.id, 'promoted', config.tenantId);
           existingHashes.add(computeContentHash(candidate.content));
           res.promoted++;
           outcomes.push({ candidateId: candidate.id, outcome: 'promoted' });
           break;
         case 'duplicate':
-          candidateRepo.updateStatus(candidate.id, 'duplicate');
+          candidateRepo.updateStatus(candidate.id, 'duplicate', config.tenantId);
           res.duplicates++;
           outcomes.push({ candidateId: candidate.id, outcome: 'duplicate' });
           break;

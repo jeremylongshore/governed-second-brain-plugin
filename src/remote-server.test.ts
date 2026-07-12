@@ -154,3 +154,162 @@ describe('search — proxy to the team brain (errors are SURFACED, never swallow
     expect(out['results']).toBeUndefined();
   });
 });
+
+describe('brain_inbox / brain_approve / brain_reject — the admin review surface (jfv.8)', () => {
+  it('brain_inbox lists the quarantined queue, compacted + limited, id-less rows dropped', async () => {
+    const { listInbox } = await load({
+      TEAMKB_API_URL: 'http://brain:3847',
+      TEAMKB_API_TOKEN: 'admin-tok',
+    });
+    const capturedUrl: string[] = [];
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (url: string) => {
+        capturedUrl.push(url);
+        return new Response(
+          JSON.stringify([
+            {
+              id: 'c1',
+              title: 'T1',
+              category: 'decision',
+              author: { type: 'ai', id: 'ope' },
+              capturedAt: '2026-07-11T00:00:00.000Z',
+            },
+            { title: 'no id — must be dropped' },
+            { id: 'c2', title: 'T2', category: 'pattern', author: 'max' },
+          ]),
+          { status: 200 },
+        );
+      }),
+    );
+    const out = payload(await listInbox(undefined, 1));
+    // Hits the quarantined filter on the default team tenant.
+    expect(capturedUrl[0]).toContain('status=quarantined');
+    expect(capturedUrl[0]).toContain('tenantId=intent-solutions');
+    // limit=1 → only the first valid row; the id-less row is dropped.
+    expect(out['ok']).toBe(true);
+    expect(out['count']).toBe(1);
+    const candidates = out['candidates'] as Array<Record<string, unknown>>;
+    expect(candidates[0]).toEqual({
+      id: 'c1',
+      title: 'T1',
+      category: 'decision',
+      author: 'ope',
+      capturedAt: '2026-07-11T00:00:00.000Z',
+    });
+  });
+
+  it('brain_inbox surfaces a 403 for a member token (admin-only), never a silent empty list', async () => {
+    const { listInbox } = await load({ TEAMKB_API_URL: 'http://brain:3847' });
+    vi.stubGlobal('fetch', vi.fn(async () => new Response('', { status: 403 })));
+    const out = payload(await listInbox('intent-solutions', 50));
+    expect(out['ok']).toBe(false);
+    expect(out['status']).toBe(403);
+    expect(String(out['error'])).toMatch(/ADMIN token/);
+    expect(out['candidates']).toBeUndefined();
+  });
+
+  it('brain_approve POSTs to /promote with actorType:ai + reason, returns the new memory id', async () => {
+    const { approveCandidate } = await load({
+      TEAMKB_API_URL: 'http://brain:3847',
+      TEAMKB_API_TOKEN: 'admin-tok',
+    });
+    let sentBody: Record<string, unknown> = {};
+    let sentUrl = '';
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (url: string, init: { body: string }) => {
+        sentUrl = url;
+        sentBody = JSON.parse(init.body);
+        return new Response(JSON.stringify({ id: 'mem-99' }), { status: 200 });
+      }),
+    );
+    const out = payload(await approveCandidate('cand-1', 'team-alpha', 'durable + useful'));
+    expect(sentUrl).toContain('/api/candidates/cand-1/promote');
+    expect(sentUrl).toContain('tenantId=team-alpha');
+    // The agent proxy hints AI; the server owns the actor id (not sent here).
+    expect(sentBody).toEqual({ reason: 'durable + useful', actorType: 'ai' });
+    expect(out['ok']).toBe(true);
+    expect(out['memoryId']).toBe('mem-99');
+  });
+
+  it('brain_approve surfaces the server 422 (secret/duplicate refused at the govern gate), nothing applied', async () => {
+    const { approveCandidate } = await load({
+      TEAMKB_API_URL: 'http://brain:3847',
+      TEAMKB_API_TOKEN: 'admin-tok',
+    });
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => new Response(JSON.stringify({ error: 'disclosure gate' }), { status: 422 })),
+    );
+    const out = payload(await approveCandidate('cand-1', 'team-alpha', 'try to launder a secret'));
+    expect(out['ok']).toBe(false);
+    expect(out['status']).toBe(422);
+    expect(String(out['error'])).toMatch(/disclosure gate/);
+    expect(out['memoryId']).toBeUndefined();
+  });
+
+  it('brain_reject POSTs to /reject and reports the retirement, never deletes', async () => {
+    const { rejectCandidate } = await load({
+      TEAMKB_API_URL: 'http://brain:3847',
+      TEAMKB_API_TOKEN: 'admin-tok',
+    });
+    let sentUrl = '';
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (url: string) => {
+        sentUrl = url;
+        return new Response(JSON.stringify({ ok: true }), { status: 200 });
+      }),
+    );
+    const out = payload(await rejectCandidate('cand-2', 'team-alpha', 'noise'));
+    expect(sentUrl).toContain('/api/candidates/cand-2/reject');
+    expect(out['ok']).toBe(true);
+    expect(String(out['message'])).toMatch(/rejected/i);
+  });
+
+  it('all three surface an unconfigured error when TEAMKB_API_URL is unset', async () => {
+    const { listInbox, approveCandidate, rejectCandidate } = await load({
+      TEAMKB_API_URL: undefined,
+    });
+    for (const out of [
+      payload(await listInbox(undefined, 50)),
+      payload(await approveCandidate('x', undefined, 'r')),
+      payload(await rejectCandidate('x', undefined, 'r')),
+    ]) {
+      expect(out['ok']).toBe(false);
+      expect(String(out['error'])).toContain('unconfigured');
+    }
+  });
+
+  it('brain_approve surfaces a network error (dead API / off-tailnet), never a silent success', async () => {
+    const { approveCandidate } = await load({ TEAMKB_API_URL: 'http://brain:3847' });
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => {
+        throw new Error('ECONNREFUSED');
+      }),
+    );
+    const out = payload(await approveCandidate('cand-1', 'team-alpha', 'r'));
+    expect(out['ok']).toBe(false);
+    expect(String(out['error'])).toContain('could not reach the brain API');
+  });
+
+  it('brain_inbox surfaces (not crashes) an unreadable non-JSON 2xx body', async () => {
+    const { listInbox } = await load({ TEAMKB_API_URL: 'http://brain:3847', TEAMKB_API_TOKEN: 'admin-tok' });
+    vi.stubGlobal('fetch', vi.fn(async () => new Response('<html>not json</html>', { status: 200 })));
+    const out = payload(await listInbox(undefined, 50));
+    expect(out['ok']).toBe(false);
+    expect(String(out['error'])).toMatch(/unreadable/i);
+    expect(out['candidates']).toBeUndefined();
+  });
+
+  it('brain_approve keeps a SUCCEEDED promotion ok even if the 2xx body is unreadable', async () => {
+    const { approveCandidate } = await load({ TEAMKB_API_URL: 'http://brain:3847', TEAMKB_API_TOKEN: 'admin-tok' });
+    vi.stubGlobal('fetch', vi.fn(async () => new Response('not json', { status: 200 })));
+    const out = payload(await approveCandidate('cand-1', 'team-alpha', 'ok'));
+    // The 2xx means it was promoted — don't turn that into an error over a bad body.
+    expect(out['ok']).toBe(true);
+    expect(out['memoryId']).toBeUndefined();
+  });
+});

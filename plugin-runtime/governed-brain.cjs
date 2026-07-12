@@ -35513,8 +35513,11 @@ var init_stdio2 = __esm({
 // src/remote-server.ts
 var remote_server_exports = {};
 __export(remote_server_exports, {
+  approveCandidate: () => approveCandidate,
   authHeaders: () => authHeaders,
   errorResult: () => errorResult,
+  listInbox: () => listInbox,
+  rejectCandidate: () => rejectCandidate,
   search: () => search,
   startRemoteServer: () => startRemoteServer,
   status: () => status
@@ -35608,6 +35611,99 @@ async function status() {
     version = null;
   }
   return jsonResult({ mode: "team", apiUrl, tokenSet, healthy: res.ok, version });
+}
+function resolveTenant(tenantId) {
+  const t = tenantId?.trim();
+  return t !== void 0 && t !== "" ? t : TENANT_ID;
+}
+async function listInbox(tenantId, limit) {
+  if (API_URL === void 0 || API_URL === "") {
+    return jsonResult({ ok: false, error: "unconfigured \u2014 set TEAMKB_API_URL to your team brain" });
+  }
+  const tenant = resolveTenant(tenantId);
+  const url = `${API_URL.replace(/\/+$/, "")}/api/candidates?status=quarantined&tenantId=${encodeURIComponent(tenant)}`;
+  let res;
+  try {
+    res = await fetch(url, { method: "GET", headers: authHeaders() });
+  } catch (e) {
+    return jsonResult({ ok: false, error: `could not reach the brain API: ${e instanceof Error ? e.message : String(e)}` });
+  }
+  if (!res.ok) return errorResult(res);
+  let rows;
+  try {
+    rows = await res.json();
+  } catch {
+    return jsonResult({ ok: false, error: "the brain returned an unreadable (non-JSON) inbox response" });
+  }
+  const candidates = (Array.isArray(rows) ? rows : []).filter((r) => typeof r.id === "string" && r.id.length > 0).slice(0, limit).map((r) => ({
+    id: r.id,
+    title: typeof r.title === "string" ? r.title : "",
+    category: typeof r.category === "string" ? r.category : "",
+    author: typeof r.author === "object" && r.author !== null ? r.author.id ?? "" : r.author ?? "",
+    capturedAt: typeof r.capturedAt === "string" ? r.capturedAt : ""
+  }));
+  return jsonResult({ ok: true, tenantId: tenant, count: candidates.length, candidates });
+}
+async function approveCandidate(candidateId, tenantId, reason) {
+  if (API_URL === void 0 || API_URL === "") {
+    return jsonResult({ ok: false, error: "unconfigured \u2014 set TEAMKB_API_URL to your team brain" });
+  }
+  const tenant = resolveTenant(tenantId);
+  let res;
+  try {
+    res = await fetch(
+      `${API_URL.replace(/\/+$/, "")}/api/candidates/${encodeURIComponent(candidateId)}/promote?tenantId=${encodeURIComponent(tenant)}`,
+      {
+        method: "POST",
+        headers: authHeaders(),
+        // actorType:'ai' — this is the review AGENT proxying; the SERVER derives
+        // the actor id from the authenticated token, so it can't be spoofed here.
+        body: JSON.stringify({ reason, actorType: "ai" })
+      }
+    );
+  } catch (e) {
+    return jsonResult({ ok: false, error: `could not reach the brain API: ${e instanceof Error ? e.message : String(e)}` });
+  }
+  if (!res.ok) return errorResult(res);
+  let memory = null;
+  try {
+    memory = await res.json();
+  } catch {
+    memory = null;
+  }
+  return jsonResult({
+    ok: true,
+    candidateId,
+    memoryId: memory?.id,
+    tenantId: tenant,
+    message: "Promoted to durable team memory \u2014 it passed the deterministic govern rules and a hash-chained receipt names you as the approving actor."
+  });
+}
+async function rejectCandidate(candidateId, tenantId, reason) {
+  if (API_URL === void 0 || API_URL === "") {
+    return jsonResult({ ok: false, error: "unconfigured \u2014 set TEAMKB_API_URL to your team brain" });
+  }
+  const tenant = resolveTenant(tenantId);
+  let res;
+  try {
+    res = await fetch(
+      `${API_URL.replace(/\/+$/, "")}/api/candidates/${encodeURIComponent(candidateId)}/reject?tenantId=${encodeURIComponent(tenant)}`,
+      {
+        method: "POST",
+        headers: authHeaders(),
+        body: JSON.stringify({ reason, actorType: "ai" })
+      }
+    );
+  } catch (e) {
+    return jsonResult({ ok: false, error: `could not reach the brain API: ${e instanceof Error ? e.message : String(e)}` });
+  }
+  if (!res.ok) return errorResult(res);
+  return jsonResult({
+    ok: true,
+    candidateId,
+    tenantId: tenant,
+    message: "Retired as rejected (row preserved); a hash-chained receipt names you + your reason."
+  });
 }
 async function startRemoteServer() {
   const transport = new StdioServerTransport();
@@ -35747,6 +35843,35 @@ var init_remote_server = __esm({
           message: "Transition applied; hash-chained audit event written server-side."
         });
       }
+    );
+    server.tool(
+      "brain_inbox",
+      "List your team brain's quarantined capture queue \u2014 member proposals held for review, awaiting an admin's promote/reject. ADMIN-ONLY in team mode (a member token gets a clear 403). Read-only; returns { id, title, category, author, capturedAt } per candidate so you can review then brain_approve / brain_reject by id. Proxies to the governed brain over the tailnet.",
+      {
+        tenantId: import_zod2.z.string().optional().describe("Tenant to inspect (default: the team tenant)"),
+        limit: import_zod2.z.number().int().min(1).max(200).optional().describe("Max candidates to return (default 50)")
+      },
+      async (params) => listInbox(params.tenantId, params.limit ?? 50)
+    );
+    server.tool(
+      "brain_approve",
+      "Promote a quarantined candidate to durable team memory \u2014 the agent-review 'this is worth keeping' verdict. ADMIN-ONLY (member token \u2192 403, nothing applied). The server re-runs the deterministic govern rules (dedupe / policy / secret-scan) as a hard floor you CANNOT override, then writes a hash-chained receipt naming you (the acting token) + your reason. A secret or duplicate is refused server-side (422) \u2014 it cannot be laundered through an approval.",
+      {
+        candidateId: import_zod2.z.string().uuid().describe("UUID of the quarantined candidate (from brain_inbox)"),
+        tenantId: import_zod2.z.string().optional().describe("Tenant the candidate belongs to (default: the team tenant)"),
+        reason: import_zod2.z.string().min(1).describe("Why it should become durable memory (lands in the receipt)")
+      },
+      async (params) => approveCandidate(params.candidateId, params.tenantId, params.reason)
+    );
+    server.tool(
+      "brain_reject",
+      "Retire a quarantined candidate as noise WITHOUT promoting it \u2014 the agent-review 'don't keep proposing this' verdict. ADMIN-ONLY (member token \u2192 403). Non-destructive: the candidate row survives (never deleted), stamped `rejected`, and a hash-chained receipt names you + your reason. Proxies to the governed brain over the tailnet.",
+      {
+        candidateId: import_zod2.z.string().uuid().describe("UUID of the quarantined candidate (from brain_inbox)"),
+        tenantId: import_zod2.z.string().optional().describe("Tenant the candidate belongs to (default: the team tenant)"),
+        reason: import_zod2.z.string().min(1).describe("Why it is being retired (lands in the receipt)")
+      },
+      async (params) => rejectCandidate(params.candidateId, params.tenantId, params.reason)
     );
   }
 });
@@ -36999,6 +37124,7 @@ var init_candidate_repository = __esm({
       stmtFindByTenant;
       stmtFindByStatus;
       stmtFindByHash;
+      stmtFindByHashAndTenant;
       stmtCount;
       stmtCountByTenant;
       stmtDeleteByBatch;
@@ -37029,8 +37155,11 @@ var init_candidate_repository = __esm({
         this.stmtFindByHash = db.prepare(`
       SELECT * FROM candidates WHERE content_hash = ? LIMIT 1
     `);
+        this.stmtFindByHashAndTenant = db.prepare(`
+      SELECT * FROM candidates WHERE content_hash = ? AND tenant_id = ? LIMIT 1
+    `);
         this.stmtUpdateStatus = db.prepare(`
-      UPDATE candidates SET status = @status WHERE id = @id
+      UPDATE candidates SET status = @status WHERE id = @id AND tenant_id = @tenantId
     `);
         this.stmtCount = db.prepare(`
       SELECT COUNT(*) as cnt FROM candidates
@@ -37134,13 +37263,15 @@ var init_candidate_repository = __esm({
        *
        * Validates `status` against the closed {@link CandidateStatus} vocabulary before
        * writing (a raw UPDATE otherwise bypasses the enum-membership backstop that
-       * `insert()` enforces). Returns the number of rows changed (0 if `id` is absent).
+       * `insert()` enforces). Scoped to `tenantId` so the primitive cannot flip a row
+       * outside the caller's tenant. Returns the number of rows changed (0 if no row
+       * matches `id` AND `tenantId`).
        *
        * @throws {z.ZodError} if `status` is not a valid CandidateStatus value.
        */
-      updateStatus(id, status2) {
+      updateStatus(id, status2, tenantId) {
         const validated = CandidateStatus.parse(status2);
-        return this.stmtUpdateStatus.run({ id, status: validated }).changes;
+        return this.stmtUpdateStatus.run({ id, status: validated, tenantId }).changes;
       }
       /**
        * Return the first candidate with the given content hash, or null.
@@ -37148,6 +37279,16 @@ var init_candidate_repository = __esm({
        */
       findByContentHash(hash) {
         const row = this.stmtFindByHash.get(hash);
+        return row !== void 0 ? rowToCandidate(row) : null;
+      }
+      /**
+       * Return the first candidate with the given content hash FOR A TENANT, or null —
+       * the tenant-scoped dedup the idempotent intake path uses (jfv.9). Prefer this
+       * over {@link findByContentHash} on any per-tenant write path: the unscoped
+       * variant can return another tenant's row.
+       */
+      findByContentHashAndTenant(hash, tenantId) {
+        const row = this.stmtFindByHashAndTenant.get(hash, tenantId);
         return row !== void 0 ? rowToCandidate(row) : null;
       }
       /** Return the total number of candidates in the store. */
@@ -38119,6 +38260,10 @@ function appendAnchor(repo, anchorPath, opts) {
   const rows = chainedRowsOf(repo);
   const head = rows.length > 0 ? rows[rows.length - 1].entry_hash ?? "" : "";
   const existing = readAnchors(anchorPath);
+  const lastAnchor = existing.length > 0 ? existing[existing.length - 1] : null;
+  if (lastAnchor !== null && lastAnchor.chainHead === head && lastAnchor.chainedRows === rows.length) {
+    return lastAnchor;
+  }
   const prevAnchorHash = existing.length > 0 ? existing[existing.length - 1].anchorHash : null;
   const body = {
     schemaVersion: 1,
@@ -40517,7 +40662,7 @@ function promote(input, memoryRepo, auditRepo, dryRun = false, linksRepo, evalCa
     contentHash: input.contentHash,
     policyEvaluations,
     promotedAt: now,
-    promotedBy: { type: "system", id: "curator" },
+    promotedBy: input.promotedBy ?? CURATOR_ACTOR,
     updatedAt: now,
     version: 1
   });
@@ -40606,8 +40751,8 @@ function promote(input, memoryRepo, auditRepo, dryRun = false, linksRepo, evalCa
         action: "promoted",
         memoryId,
         tenantId: input.candidate.tenantId,
-        actor: { type: "system", id: "curator" },
-        reason: "Passed all governance rules",
+        actor: input.promotedBy ?? CURATOR_ACTOR,
+        reason: input.promotionReason !== void 0 && input.promotionReason.trim().length > 0 ? `${input.promotionReason} (passed all governance rules)` : "Passed all governance rules",
         details: { candidateId: input.candidate.id },
         timestamp: now
       }));
@@ -40641,12 +40786,14 @@ function promote(input, memoryRepo, auditRepo, dryRun = false, linksRepo, evalCa
   }
   return memory;
 }
+var CURATOR_ACTOR;
 var init_promoter = __esm({
   "../qmd-team-intent-kb/apps/curator/dist/promotion/promoter.js"() {
     "use strict";
     init_dist2();
     init_dist();
     init_wikilink_parser();
+    CURATOR_ACTOR = { type: "system", id: "curator" };
   }
 });
 
@@ -41555,7 +41702,7 @@ function sweepInbox(config2, deps) {
   for (const candidate of inbox) {
     try {
       if (isMemberAuthored(candidate)) {
-        candidateRepo.updateStatus(candidate.id, "quarantined");
+        candidateRepo.updateStatus(candidate.id, "quarantined", config2.tenantId);
         res.quarantined++;
         outcomes.push({ candidateId: candidate.id, outcome: "quarantined" });
         continue;
@@ -41563,13 +41710,13 @@ function sweepInbox(config2, deps) {
       const result = curator.processSingle(candidate, existingHashes);
       switch (result.outcome) {
         case "promoted":
-          candidateRepo.updateStatus(candidate.id, "promoted");
+          candidateRepo.updateStatus(candidate.id, "promoted", config2.tenantId);
           existingHashes.add(computeContentHash(candidate.content));
           res.promoted++;
           outcomes.push({ candidateId: candidate.id, outcome: "promoted" });
           break;
         case "duplicate":
-          candidateRepo.updateStatus(candidate.id, "duplicate");
+          candidateRepo.updateStatus(candidate.id, "duplicate", config2.tenantId);
           res.duplicates++;
           outcomes.push({ candidateId: candidate.id, outcome: "duplicate" });
           break;

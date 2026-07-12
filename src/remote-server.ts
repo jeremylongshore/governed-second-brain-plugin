@@ -3,8 +3,10 @@
  * Governed Second Brain — team mode (remote proxy).
  *
  * The same plugin, in TEAM mode: a self-contained stdio server that proxies the
- * read tools (`brain_search`, `brain_status`) to your team's governed brain API
- * over the tailnet. Selected automatically by the dispatcher (src/index.ts) when
+ * read tools (`brain_search`, `brain_status`), the member write tool
+ * (`brain_capture`), and the admin tools (`brain_transition` + the inbox surface
+ * `brain_inbox` / `brain_approve` / `brain_reject`) to your team's governed brain
+ * API over the tailnet. Selected automatically by the dispatcher (src/index.ts) when
  * TEAMKB_API_URL is set; otherwise the plugin runs the local in-process brain
  * instead. Failures are surfaced as distinct, visible errors — never a silent
  * empty result set.
@@ -310,6 +312,187 @@ server.tool(
       message: 'Transition applied; hash-chained audit event written server-side.',
     });
   },
+);
+
+// ─── ADMIN INBOX (team mode: review + dispose the quarantined queue) ──────────
+// The last mile of team capture (jfv.8 / 014-AT-DECR): member proposals land
+// QUARANTINED by the nightly govern sweep and, without these, rot unreviewed.
+// brain_inbox lists them; brain_approve / brain_reject dispose them. All three are
+// ADMIN-ONLY (a member token gets a clear 403 via errorResult) and HTTP-proxy only
+// — no sqlite, so team mode stays install-free. The deterministic pipeline OWNS the
+// transition: brain_approve's promote re-runs the govern rules server-side
+// (dedupe/policy/secret-scan) as a hard floor the caller cannot override, and every
+// decision is a hash-chained receipt naming the acting token as the actor.
+//
+// Handlers are exported (like search/status) so they are unit-testable against a
+// stubbed fetch. Tenant defaults to TENANT_ID; an explicit tenantId overrides.
+
+/** Resolve the target tenant: an explicit non-empty override, else the team tenant. */
+function resolveTenant(tenantId: string | undefined): string {
+  const t = tenantId?.trim();
+  return t !== undefined && t !== '' ? t : TENANT_ID;
+}
+
+/** List the quarantined review queue (admin). Returns a compact per-candidate view. */
+export async function listInbox(
+  tenantId: string | undefined,
+  limit: number,
+): Promise<ReturnType<typeof jsonResult>> {
+  if (API_URL === undefined || API_URL === '') {
+    return jsonResult({ ok: false, error: 'unconfigured — set TEAMKB_API_URL to your team brain' });
+  }
+  const tenant = resolveTenant(tenantId);
+  const url =
+    `${API_URL.replace(/\/+$/, '')}/api/candidates` +
+    `?status=quarantined&tenantId=${encodeURIComponent(tenant)}`;
+  let res: Response;
+  try {
+    res = await fetch(url, { method: 'GET', headers: authHeaders() });
+  } catch (e) {
+    return jsonResult({ ok: false, error: `could not reach the brain API: ${e instanceof Error ? e.message : String(e)}` });
+  }
+  if (!res.ok) return errorResult(res);
+  let rows: Array<{
+    id?: string;
+    title?: string;
+    category?: string;
+    author?: { id?: string } | string;
+    capturedAt?: string;
+  }>;
+  try {
+    // A 2xx with an unreadable (non-JSON) body must not crash the tool — surface it.
+    rows = (await res.json()) as typeof rows;
+  } catch {
+    return jsonResult({ ok: false, error: 'the brain returned an unreadable (non-JSON) inbox response' });
+  }
+  const candidates = (Array.isArray(rows) ? rows : [])
+    .filter((r) => typeof r.id === 'string' && r.id.length > 0)
+    .slice(0, limit)
+    .map((r) => ({
+      id: r.id as string,
+      title: typeof r.title === 'string' ? r.title : '',
+      category: typeof r.category === 'string' ? r.category : '',
+      author:
+        typeof r.author === 'object' && r.author !== null ? (r.author.id ?? '') : (r.author ?? ''),
+      capturedAt: typeof r.capturedAt === 'string' ? r.capturedAt : '',
+    }));
+  return jsonResult({ ok: true, tenantId: tenant, count: candidates.length, candidates });
+}
+
+/** Promote a quarantined candidate to durable memory through the govern gate (admin). */
+export async function approveCandidate(
+  candidateId: string,
+  tenantId: string | undefined,
+  reason: string,
+): Promise<ReturnType<typeof jsonResult>> {
+  if (API_URL === undefined || API_URL === '') {
+    return jsonResult({ ok: false, error: 'unconfigured — set TEAMKB_API_URL to your team brain' });
+  }
+  const tenant = resolveTenant(tenantId);
+  let res: Response;
+  try {
+    res = await fetch(
+      `${API_URL.replace(/\/+$/, '')}/api/candidates/${encodeURIComponent(candidateId)}/promote` +
+        `?tenantId=${encodeURIComponent(tenant)}`,
+      {
+        method: 'POST',
+        headers: authHeaders(),
+        // actorType:'ai' — this is the review AGENT proxying; the SERVER derives
+        // the actor id from the authenticated token, so it can't be spoofed here.
+        body: JSON.stringify({ reason, actorType: 'ai' }),
+      },
+    );
+  } catch (e) {
+    return jsonResult({ ok: false, error: `could not reach the brain API: ${e instanceof Error ? e.message : String(e)}` });
+  }
+  if (!res.ok) return errorResult(res);
+  // The promotion already SUCCEEDED (2xx). An unreadable/null body must not turn a
+  // real promotion into an error — just report ok without the memory id.
+  let memory: { id?: string } | null = null;
+  try {
+    memory = (await res.json()) as { id?: string } | null;
+  } catch {
+    memory = null;
+  }
+  return jsonResult({
+    ok: true,
+    candidateId,
+    memoryId: memory?.id,
+    tenantId: tenant,
+    message:
+      'Promoted to durable team memory — it passed the deterministic govern rules and a hash-chained receipt names you as the approving actor.',
+  });
+}
+
+/** Retire a quarantined candidate as `rejected` (admin) — a marker, never a delete. */
+export async function rejectCandidate(
+  candidateId: string,
+  tenantId: string | undefined,
+  reason: string,
+): Promise<ReturnType<typeof jsonResult>> {
+  if (API_URL === undefined || API_URL === '') {
+    return jsonResult({ ok: false, error: 'unconfigured — set TEAMKB_API_URL to your team brain' });
+  }
+  const tenant = resolveTenant(tenantId);
+  let res: Response;
+  try {
+    res = await fetch(
+      `${API_URL.replace(/\/+$/, '')}/api/candidates/${encodeURIComponent(candidateId)}/reject` +
+        `?tenantId=${encodeURIComponent(tenant)}`,
+      {
+        method: 'POST',
+        headers: authHeaders(),
+        body: JSON.stringify({ reason, actorType: 'ai' }),
+      },
+    );
+  } catch (e) {
+    return jsonResult({ ok: false, error: `could not reach the brain API: ${e instanceof Error ? e.message : String(e)}` });
+  }
+  if (!res.ok) return errorResult(res);
+  return jsonResult({
+    ok: true,
+    candidateId,
+    tenantId: tenant,
+    message: 'Retired as rejected (row preserved); a hash-chained receipt names you + your reason.',
+  });
+}
+
+server.tool(
+  'brain_inbox',
+  "List your team brain's quarantined capture queue — member proposals held for review, awaiting an admin's promote/reject. ADMIN-ONLY in team mode (a member token gets a clear 403). Read-only; returns { id, title, category, author, capturedAt } per candidate so you can review then brain_approve / brain_reject by id. Proxies to the governed brain over the tailnet.",
+  {
+    tenantId: z.string().optional().describe('Tenant to inspect (default: the team tenant)'),
+    limit: z
+      .number()
+      .int()
+      .min(1)
+      .max(200)
+      .optional()
+      .describe('Max candidates to return (default 50)'),
+  },
+  async (params) => listInbox(params.tenantId, params.limit ?? 50),
+);
+
+server.tool(
+  'brain_approve',
+  "Promote a quarantined candidate to durable team memory — the agent-review 'this is worth keeping' verdict. ADMIN-ONLY (member token → 403, nothing applied). The server re-runs the deterministic govern rules (dedupe / policy / secret-scan) as a hard floor you CANNOT override, then writes a hash-chained receipt naming you (the acting token) + your reason. A secret or duplicate is refused server-side (422) — it cannot be laundered through an approval.",
+  {
+    candidateId: z.string().uuid().describe('UUID of the quarantined candidate (from brain_inbox)'),
+    tenantId: z.string().optional().describe('Tenant the candidate belongs to (default: the team tenant)'),
+    reason: z.string().min(1).describe('Why it should become durable memory (lands in the receipt)'),
+  },
+  async (params) => approveCandidate(params.candidateId, params.tenantId, params.reason),
+);
+
+server.tool(
+  'brain_reject',
+  "Retire a quarantined candidate as noise WITHOUT promoting it — the agent-review 'don't keep proposing this' verdict. ADMIN-ONLY (member token → 403). Non-destructive: the candidate row survives (never deleted), stamped `rejected`, and a hash-chained receipt names you + your reason. Proxies to the governed brain over the tailnet.",
+  {
+    candidateId: z.string().uuid().describe('UUID of the quarantined candidate (from brain_inbox)'),
+    tenantId: z.string().optional().describe('Tenant the candidate belongs to (default: the team tenant)'),
+    reason: z.string().min(1).describe('Why it is being retired (lands in the receipt)'),
+  },
+  async (params) => rejectCandidate(params.candidateId, params.tenantId, params.reason),
 );
 
 /**

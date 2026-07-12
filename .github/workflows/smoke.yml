@@ -53,6 +53,12 @@ jobs:
       - name: Smoke — B1 auto-govern inbox sweep (quarantine + idempotency)
         run: node smoke/b1-inbox-sweep.mjs
 
+      # jfv.8 / 014-AT-DECR: the agent-review admin tools (brain_inbox / brain_approve
+      # / brain_reject) driven through the built team-mode runtime over a real socket
+      # against a request-capturing stub — proves the tool→wire contract.
+      - name: Smoke — inbox approve/reject admin tools (team-mode wire contract)
+        run: node smoke/inbox-approve.mjs
+
       # Onboarding: the src/index.ts mode-dispatch + fail-closed wiring, driven END-TO-END
       # through the committed bundle (team.json → env fill → local/team; loose-perms &
       # snake_case → loud refusal). Zero egress — team mode opens no socket at boot.
