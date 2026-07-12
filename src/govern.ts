@@ -261,12 +261,19 @@ function sweepInbox(config: BrainConfig, deps: SweepDeps): SweepResult {
   // candidate has its own error containment).
   const existingHashes = new Set(memoryRepo.getContentHashesByTenant(config.tenantId));
   const outcomes: SweepOutcome[] = [];
+  // Marker flips for the receipt-LESS outcomes (quarantine / duplicate) are DEFERRED
+  // and applied atomically WITH the batch receipt below (jfv.2.5b). A `promoted` flip
+  // stays in-loop because its curated memory + its own 'promoted' receipt are already
+  // one atomic write (R9). Deferring quarantine/duplicate means a failed batch receipt
+  // rolls their flips back too — so those candidates stay `inbox` and are retried next
+  // run, instead of leaving the inbox with NO on-chain record of why.
+  const pendingFlips: Array<{ id: string; status: 'quarantined' | 'duplicate' }> = [];
 
   for (const candidate of inbox) {
     try {
       // Member-quarantine gate: a member's proposal must NOT auto-promote.
       if (isMemberAuthored(candidate)) {
-        candidateRepo.updateStatus(candidate.id, 'quarantined', config.tenantId);
+        pendingFlips.push({ id: candidate.id, status: 'quarantined' });
         res.quarantined++;
         outcomes.push({ candidateId: candidate.id, outcome: 'quarantined' });
         continue;
@@ -281,7 +288,7 @@ function sweepInbox(config: BrainConfig, deps: SweepDeps): SweepResult {
           outcomes.push({ candidateId: candidate.id, outcome: 'promoted' });
           break;
         case 'duplicate':
-          candidateRepo.updateStatus(candidate.id, 'duplicate', config.tenantId);
+          pendingFlips.push({ id: candidate.id, status: 'duplicate' });
           res.duplicates++;
           outcomes.push({ candidateId: candidate.id, outcome: 'duplicate' });
           break;
@@ -311,7 +318,18 @@ function sweepInbox(config: BrainConfig, deps: SweepDeps): SweepResult {
   // re-run idempotent. Content is NEVER included (ids + outcomes only).
   const leftInbox = res.promoted + res.duplicates + res.quarantined;
   if (leftInbox > 0) {
-    try {
+    // ATOMIC (jfv.2.5b): apply the deferred quarantine/duplicate marker flips AND
+    // write the batch receipt in ONE transaction. Previously the receipt was a
+    // swallow-on-failure append AFTER the flips had already autocommitted — so a
+    // failed insert left those flips on the record-less. Now a failed receipt rolls
+    // the flips back too (the candidates stay `inbox`, retried next run), and the
+    // error is NOT swallowed: it propagates so runGovern surfaces it (the nightly
+    // wrapper's fail-loud path alerts) rather than silently drifting. Promoted rows
+    // already carry their own transactional 'promoted' receipt, so they persist.
+    memoryRepo.connection.transaction((): void => {
+      for (const flip of pendingFlips) {
+        candidateRepo.updateStatus(flip.id, flip.status, config.tenantId);
+      }
       auditRepo.insert(
         AuditEvent.parse({
           id: randomUUID(),
@@ -333,12 +351,7 @@ function sweepInbox(config: BrainConfig, deps: SweepDeps): SweepResult {
           timestamp: new Date().toISOString(),
         }),
       );
-    } catch (e) {
-      // Best-effort: a failed batch receipt must not undo the governed writes.
-      process.stderr.write(
-        `[govern:sweep] batch receipt skipped: ${e instanceof Error ? e.message : String(e)}\n`,
-      );
-    }
+    })();
   }
 
   return res;

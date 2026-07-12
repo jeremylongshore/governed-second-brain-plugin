@@ -41814,10 +41814,11 @@ function sweepInbox(config2, deps) {
   );
   const existingHashes = new Set(memoryRepo.getContentHashesByTenant(config2.tenantId));
   const outcomes = [];
+  const pendingFlips = [];
   for (const candidate of inbox) {
     try {
       if (isMemberAuthored(candidate)) {
-        candidateRepo.updateStatus(candidate.id, "quarantined", config2.tenantId);
+        pendingFlips.push({ id: candidate.id, status: "quarantined" });
         res.quarantined++;
         outcomes.push({ candidateId: candidate.id, outcome: "quarantined" });
         continue;
@@ -41831,7 +41832,7 @@ function sweepInbox(config2, deps) {
           outcomes.push({ candidateId: candidate.id, outcome: "promoted" });
           break;
         case "duplicate":
-          candidateRepo.updateStatus(candidate.id, "duplicate", config2.tenantId);
+          pendingFlips.push({ id: candidate.id, status: "duplicate" });
           res.duplicates++;
           outcomes.push({ candidateId: candidate.id, outcome: "duplicate" });
           break;
@@ -41855,7 +41856,10 @@ function sweepInbox(config2, deps) {
   }
   const leftInbox = res.promoted + res.duplicates + res.quarantined;
   if (leftInbox > 0) {
-    try {
+    memoryRepo.connection.transaction(() => {
+      for (const flip of pendingFlips) {
+        candidateRepo.updateStatus(flip.id, flip.status, config2.tenantId);
+      }
       auditRepo.insert(
         AuditEvent.parse({
           id: (0, import_node_crypto10.randomUUID)(),
@@ -41877,12 +41881,7 @@ function sweepInbox(config2, deps) {
           timestamp: (/* @__PURE__ */ new Date()).toISOString()
         })
       );
-    } catch (e) {
-      process.stderr.write(
-        `[govern:sweep] batch receipt skipped: ${e instanceof Error ? e.message : String(e)}
-`
-      );
-    }
+    })();
   }
   return res;
 }
