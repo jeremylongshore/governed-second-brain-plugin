@@ -116,8 +116,13 @@ export function loadTeamConfig(env: NodeJS.ProcessEnv = process.env): TeamConfig
   let parsed: unknown;
   try {
     parsed = JSON.parse(text);
-  } catch (e) {
-    throw new TeamConfigError(`${path} is not valid JSON: ${(e as Error).message}`);
+  } catch {
+    // Deliberately DO NOT echo the parser's message: on Node 20+ a syntax error can
+    // embed a snippet of the file contents (which may include a token fragment) and
+    // index.ts writes this to stderr → the MCP debug log. Keep it content-free.
+    throw new TeamConfigError(
+      `${path} is not valid JSON — could not parse it. Check for a trailing comma or an unquoted value.`,
+    );
   }
   if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) {
     throw new TeamConfigError(
@@ -129,6 +134,21 @@ export function loadTeamConfig(env: NodeJS.ProcessEnv = process.env): TeamConfig
   for (const key of Object.keys(KEY_TO_ENV) as TeamConfigKey[]) {
     const v = obj[key];
     if (typeof v === 'string' && v.trim() !== '') config[key] = v.trim();
+  }
+  // A present team.json exists to enter TEAM mode, which is keyed on apiUrl. A file
+  // with no usable apiUrl — an empty object, snake_case `api_url`, a typo, or only
+  // tenantId/apiToken — is an INCOMPLETE team config, NOT a silent-absent file. Refuse
+  // it loudly rather than (a) fall silently through to unlocked local mode [the
+  // snake_case trap], or (b) bleed a stray tenantId into local-mode tenant scope. The
+  // recognized keys are camelCase: apiUrl / apiToken / tenantId. Listing the file's
+  // actual keys makes a snake_case/typo mistake self-diagnosing.
+  if (config.apiUrl === undefined) {
+    const found = Object.keys(obj);
+    throw new TeamConfigError(
+      `${path} has no usable "apiUrl" — a team config must set at least ` +
+        `{ "apiUrl": "http://..." } (camelCase). Found keys: ${found.length ? found.join(', ') : '(none)'}. ` +
+        `Fix the spelling, or remove the file to run the local brain.`,
+    );
   }
   return { present: true, config, path };
 }

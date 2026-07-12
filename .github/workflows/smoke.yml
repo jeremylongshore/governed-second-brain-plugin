@@ -52,3 +52,9 @@ jobs:
       # sweep — proves promote/quarantine/duplicate/keep-in-inbox + idempotency.
       - name: Smoke — B1 auto-govern inbox sweep (quarantine + idempotency)
         run: node smoke/b1-inbox-sweep.mjs
+
+      # Onboarding: the src/index.ts mode-dispatch + fail-closed wiring, driven END-TO-END
+      # through the committed bundle (team.json → env fill → local/team; loose-perms &
+      # snake_case → loud refusal). Zero egress — team mode opens no socket at boot.
+      - name: Smoke — mode dispatch + fail-closed (team.json fallback)
+        run: node --test smoke/mode-dispatch.test.mjs

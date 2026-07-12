@@ -23,17 +23,17 @@ export default defineConfig({
       provider: 'v8',
       include: ['src/mode.ts', 'src/remote-server.ts', 'src/team-config.ts'],
       reporter: ['text', 'lcov'],
-      // Honest floor just under the current measured numbers (lines 57 / stmts 54
-      // / funcs 50 / branch 49). The pure helpers (resolveMode, errorResult,
-      // authHeaders, search) are covered; the brain_capture / brain_transition
-      // tool handlers + stdio boot in remote-server.ts are exercised by smoke.yml
-      // over a real MCP session, not here — so the file-level floor is modest by
-      // design. Ratchet up as the unit surface grows; never down.
+      // Honest floor just under the current measured numbers, now including
+      // team-config.ts (measured: lines 72.6 / stmts 71.3 / funcs 63.6 / branch 63.6).
+      // team-config.ts is thoroughly unit-tested (93%+); the residual gap is entirely
+      // remote-server.ts's brain_capture / brain_transition tool handlers + stdio boot,
+      // exercised by smoke.yml over a real MCP session (and by smoke/mode-dispatch),
+      // not here. Ratchet up as the unit surface grows; never down.
       thresholds: {
-        lines: 55,
-        statements: 50,
-        functions: 45,
-        branches: 45,
+        lines: 70,
+        statements: 68,
+        functions: 60,
+        branches: 60,
       },
     },
   },

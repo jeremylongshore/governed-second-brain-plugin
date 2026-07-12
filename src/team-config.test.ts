@@ -85,6 +85,18 @@ describe('loadTeamConfig — presence + fail-closed', () => {
     expect(() => loadTeamConfig(env())).toThrow(/not valid JSON/);
   });
 
+  it('the malformed-JSON error NEVER echoes file contents (no token fragment leak)', () => {
+    // A syntax error adjacent to the token must not surface a snippet of it.
+    writeTeamJson('{ "apiToken": SECRET_TOKEN_LEAK_abc123 }', 0o600);
+    try {
+      loadTeamConfig(env());
+      throw new Error('expected a throw');
+    } catch (e) {
+      expect((e as Error).message).not.toContain('SECRET_TOKEN_LEAK_abc123');
+      expect((e as Error).message).toMatch(/not valid JSON/);
+    }
+  });
+
   it('REFUSES a non-object (array) body', () => {
     writeTeamJson('[]', 0o600);
     expect(() => loadTeamConfig(env())).toThrow(/must be a JSON object/);
@@ -95,10 +107,31 @@ describe('loadTeamConfig — presence + fail-closed', () => {
     expect(() => loadTeamConfig(env())).toThrow(/must be a JSON object/);
   });
 
-  it('ignores empty / non-string fields (whitespace apiUrl, numeric token)', () => {
-    writeTeamJson(JSON.stringify({ apiUrl: '   ', apiToken: 42, tenantId: 'x' }), 0o600);
+  it('REFUSES a present file with no usable apiUrl (empty object) — not a silent-absent file', () => {
+    writeTeamJson('{}', 0o600);
+    expect(() => loadTeamConfig(env())).toThrow(/no usable "apiUrl"/);
+  });
+
+  it('REFUSES snake_case keys (api_url) — the silent-local typo trap, and names the found keys', () => {
+    writeTeamJson(JSON.stringify({ api_url: 'http://brain:3847', api_token: 'y' }), 0o600);
+    expect(() => loadTeamConfig(env())).toThrow(/no usable "apiUrl"/);
+    expect(() => loadTeamConfig(env())).toThrow(/api_url/); // the mistake is self-diagnosing
+  });
+
+  it('REFUSES a tenantId-only file (no apiUrl) — no tenant bleed into local mode', () => {
+    writeTeamJson(JSON.stringify({ tenantId: 'intent-solutions' }), 0o600);
+    expect(() => loadTeamConfig(env())).toThrow(/no usable "apiUrl"/);
+  });
+
+  it('REFUSES a whitespace-only apiUrl (no usable value)', () => {
+    writeTeamJson(JSON.stringify({ apiUrl: '   ', tenantId: 'x' }), 0o600);
+    expect(() => loadTeamConfig(env())).toThrow(/no usable "apiUrl"/);
+  });
+
+  it('accepts a valid apiUrl and ignores non-string / empty OTHER fields', () => {
+    writeTeamJson(JSON.stringify({ apiUrl: 'http://brain:3847', apiToken: 42, tenantId: '  ' }), 0o600);
     const r = loadTeamConfig(env());
-    expect(r.config).toEqual({ tenantId: 'x' });
+    expect(r.config).toEqual({ apiUrl: 'http://brain:3847' });
   });
 
   it('trims string field values', () => {

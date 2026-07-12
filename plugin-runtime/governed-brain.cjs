@@ -36031,6 +36031,22 @@ ALTER TABLE audit_events ADD COLUMN seq INTEGER;
 UPDATE audit_events SET seq = rowid WHERE seq IS NULL;
 CREATE UNIQUE INDEX IF NOT EXISTS idx_audit_seq ON audit_events(seq);
     `.trim()
+      },
+      {
+        // Index the auto-govern inbox sweep's hot lookup (B1, bead
+        // compile-then-govern-jfv.2.1). The nightly sweep calls
+        // `CandidateRepository.findByStatus('inbox', tenantId)` — a filter on
+        // (status, tenant_id) — to drain the remote-capture inbox. Purely additive:
+        // no column change (the `candidates.status` column is already TEXT with a
+        // DEFAULT of 'inbox'; the B1 enum widening is enforced in Zod, not by a DB
+        // CHECK), just a compound index so the sweep does not table-scan `candidates`
+        // as the inbox grows. `IF NOT EXISTS` keeps it replay-safe on fresh and
+        // pre-existing databases alike.
+        version: 8,
+        name: "add_candidates_status_tenant_index",
+        sql: `
+CREATE INDEX IF NOT EXISTS idx_candidates_status_tenant ON candidates(status, tenant_id);
+    `.trim()
       }
     ];
   }
@@ -36096,7 +36112,7 @@ var init_database = __esm({
 });
 
 // ../qmd-team-intent-kb/packages/schema/dist/enums.js
-var import_zod3, MemorySource, TrustLevel, MemoryCategory, MemoryLifecycleState, CandidateStatus, SearchScope, PolicyRuleType, PolicyRuleAction, AuditAction, Confidence, Sensitivity, AuthorType, LinkType, LinkSource, ImportBatchStatus;
+var import_zod3, MemorySource, TrustLevel, MemoryCategory, MemoryLifecycleState, CandidateStatus, SearchScope, PolicyRuleType, PolicyRuleAction, AuditAction, ProposerRole, Confidence, Sensitivity, AuthorType, LinkType, LinkSource, ImportBatchStatus;
 var init_enums = __esm({
   "../qmd-team-intent-kb/packages/schema/dist/enums.js"() {
     "use strict";
@@ -36113,7 +36129,14 @@ var init_enums = __esm({
       "reference"
     ]);
     MemoryLifecycleState = import_zod3.z.enum(["active", "deprecated", "superseded", "archived"]);
-    CandidateStatus = import_zod3.z.literal("inbox");
+    CandidateStatus = import_zod3.z.enum([
+      "inbox",
+      "promoted",
+      "rejected",
+      "flagged",
+      "duplicate",
+      "quarantined"
+    ]);
     SearchScope = import_zod3.z.enum(["curated", "all", "inbox", "archived"]).default("curated");
     PolicyRuleType = import_zod3.z.enum([
       "secret_detection",
@@ -36136,8 +36159,22 @@ var init_enums = __esm({
       "exported",
       // Evidence Bundle emission on a curation/promotion cycle (IEP unification
       // thesis, DR-010 Q3). Added for the eval-surface emit path (bead tr08.15/.17/.19).
-      "eval-result"
+      "eval-result",
+      // Candidate-intake receipt — a proposal enters the pre-governance inbox (R8,
+      // bead compile-then-govern-jfv.6.7). Written at intake so every candidate has a
+      // provenance receipt (actor + contentHash + tenant) from byte one, before any
+      // promotion. `memoryId` on this row is the candidate's UUID.
+      "proposed",
+      // Batch-level receipt for one auto-govern inbox SWEEP (B1, bead
+      // compile-then-govern-jfv.2.1). ONE event per sweep that changed durable state,
+      // recording the per-candidate outcomes (candidate ids + outcome, NEVER content)
+      // so the drain of the remote-capture inbox is on the append-only chain. Replaces
+      // the per-candidate reject receipts the sweep would otherwise emit (which would
+      // re-fire every night for a candidate left in the inbox → unbounded chain bloat).
+      // `memoryId` is a fixed sweep sentinel UUID (the sweep is not tied to one memory).
+      "governed"
     ]);
+    ProposerRole = import_zod3.z.enum(["admin", "member"]);
     Confidence = import_zod3.z.enum(["high", "medium", "low"]);
     Sensitivity = import_zod3.z.enum(["public", "internal", "confidential", "restricted"]);
     AuthorType = import_zod3.z.enum(["human", "ai", "system"]);
@@ -36181,7 +36218,19 @@ var init_common = __esm({
       branch: import_zod4.z.string().optional(),
       confidence: Confidence.optional(),
       sensitivity: Sensitivity.optional(),
-      tags: import_zod4.z.array(Tag).default([])
+      tags: import_zod4.z.array(Tag).default([]),
+      /**
+       * The role of the token that proposed this candidate, stamped server-side at
+       * intake (R8, bead compile-then-govern-jfv.6.7). Never client-supplied — the
+       * intake path overwrites it from the bearer-token identity so a member cannot
+       * masquerade as an admin-authored proposal. A closed enum (`admin` | `member`),
+       * so the disclosure scanner and the enum-membership backstop treat it as
+       * closed-vocabulary. Optional/absent on legacy records and non-token (dev)
+       * intake; present on every token-authenticated proposal. Flows through
+       * promotion onto the curated memory so a later auto-govern step (B1) can
+       * quarantine member-authored content behind admin review.
+       */
+      proposedByRole: ProposerRole.optional()
     });
   }
 });
@@ -36910,6 +36959,16 @@ function rowToCandidate(row) {
   }
   return domainResult.data;
 }
+function rowToCandidateSafe(row) {
+  try {
+    return rowToCandidate(row);
+  } catch (e) {
+    const id = row !== null && typeof row === "object" && "id" in row ? String(row.id) : "<unknown>";
+    process.stderr.write(`[candidate-repository] skipping unparseable candidate row id=${id}: ${e instanceof Error ? e.message : String(e)}
+`);
+    return null;
+  }
+}
 var import_zod11, CandidateRowSchema, CandidateRepository;
 var init_candidate_repository = __esm({
   "../qmd-team-intent-kb/packages/store/dist/repositories/candidate-repository.js"() {
@@ -36938,10 +36997,12 @@ var init_candidate_repository = __esm({
       stmtInsert;
       stmtFindById;
       stmtFindByTenant;
+      stmtFindByStatus;
       stmtFindByHash;
       stmtCount;
       stmtCountByTenant;
       stmtDeleteByBatch;
+      stmtUpdateStatus;
       constructor(db) {
         this.stmtInsert = db.prepare(`
       INSERT INTO candidates (
@@ -36962,8 +37023,14 @@ var init_candidate_repository = __esm({
         this.stmtFindByTenant = db.prepare(`
       SELECT * FROM candidates WHERE tenant_id = ?
     `);
+        this.stmtFindByStatus = db.prepare(`
+      SELECT * FROM candidates WHERE status = ? AND tenant_id = ?
+    `);
         this.stmtFindByHash = db.prepare(`
       SELECT * FROM candidates WHERE content_hash = ? LIMIT 1
+    `);
+        this.stmtUpdateStatus = db.prepare(`
+      UPDATE candidates SET status = @status WHERE id = @id
     `);
         this.stmtCount = db.prepare(`
       SELECT COUNT(*) as cnt FROM candidates
@@ -37036,6 +37103,44 @@ var init_candidate_repository = __esm({
       findByTenant(tenantId) {
         const rows = this.stmtFindByTenant.all(tenantId);
         return rows.map(rowToCandidate);
+      }
+      /**
+       * Return every candidate in the given `status`, scoped to `tenantId` (B1, bead
+       * compile-then-govern-jfv.2.1). The auto-govern sweep calls
+       * `findByStatus('inbox', config.tenantId)` to drain the pre-governance inbox.
+       *
+       * TOLERANT read: a row that fails validation is skipped and reported to stderr
+       * (via {@link rowToCandidateSafe}) rather than thrown, so a single malformed
+       * candidate can never abort the whole sweep — the inbox always drains. Tenant
+       * scoping is mandatory (not optional) so a sweep can never read across the
+       * tenant boundary.
+       */
+      findByStatus(status2, tenantId) {
+        const rows = this.stmtFindByStatus.all(status2, tenantId);
+        const out = [];
+        for (const row of rows) {
+          const c = rowToCandidateSafe(row);
+          if (c !== null)
+            out.push(c);
+        }
+        return out;
+      }
+      /**
+       * Stamp a candidate's terminal status IN PLACE (B1) — the non-destructive
+       * retirement primitive the sweep uses instead of DELETE. `candidates` is
+       * insert-only Tier-A source of truth, so a governed candidate LEAVES the inbox
+       * by changing its status marker, never by deletion (which would destroy the only
+       * copy of a remote teammate's proposal + the human review queue).
+       *
+       * Validates `status` against the closed {@link CandidateStatus} vocabulary before
+       * writing (a raw UPDATE otherwise bypasses the enum-membership backstop that
+       * `insert()` enforces). Returns the number of rows changed (0 if `id` is absent).
+       *
+       * @throws {z.ZodError} if `status` is not a valid CandidateStatus value.
+       */
+      updateStatus(id, status2) {
+        const validated = CandidateStatus.parse(status2);
+        return this.stmtUpdateStatus.run({ id, status: validated }).changes;
       }
       /**
        * Return the first candidate with the given content hash, or null.
@@ -37181,6 +37286,8 @@ var init_memory_repository = __esm({
       stmtFindById;
       stmtFindByTenant;
       stmtFindByHash;
+      stmtFindByHashAndTenant;
+      stmtTenantHashes;
       stmtFindByLifecycle;
       stmtUpdateLifecycle;
       stmtUpdate;
@@ -37222,6 +37329,12 @@ var init_memory_repository = __esm({
     `);
         this.stmtFindByHash = db.prepare(`
       SELECT * FROM curated_memories WHERE content_hash = ? LIMIT 1
+    `);
+        this.stmtFindByHashAndTenant = db.prepare(`
+      SELECT * FROM curated_memories WHERE content_hash = ? AND tenant_id = ? LIMIT 1
+    `);
+        this.stmtTenantHashes = db.prepare(`
+      SELECT content_hash FROM curated_memories WHERE tenant_id = ?
     `);
         this.stmtFindByLifecycle = db.prepare(`
       SELECT * FROM curated_memories WHERE lifecycle = ?
@@ -37272,6 +37385,21 @@ var init_memory_repository = __esm({
         this.stmtFindByTenantAndLifecycle = db.prepare(`
       SELECT * FROM curated_memories WHERE tenant_id = ? AND lifecycle = ?
     `);
+      }
+      /**
+       * The underlying better-sqlite3 connection this repository was built on.
+       *
+       * Exposed read-only so a caller that writes across SEVERAL repositories on the
+       * SAME connection — the curator's `promote()`, which touches curated_memories,
+       * audit_events, and memory_links — can wrap all of those writes in ONE
+       * transaction (all-or-nothing). Every repository constructed from a single
+       * `createDatabase()` (as govern.ts / the daemon / the plugin do) shares this
+       * exact handle, so a transaction opened here serializes every repo's writes on
+       * the connection. Do not use it to bypass a repository's prepared statements —
+       * it exists only to own a multi-repository transaction.
+       */
+      get connection() {
+        return this.db;
       }
       /** Insert a new curated memory. */
       insert(memory) {
@@ -37365,6 +37493,24 @@ var init_memory_repository = __esm({
       getAllContentHashes() {
         const rows = this.stmtAllHashes.all();
         return rows.map((r) => r.content_hash);
+      }
+      /**
+       * Return the content hashes of the given tenant's memories only (B1). The
+       * tenant-scoped counterpart to {@link getAllContentHashes}, used by the curator's
+       * dedup so a batch/sweep never treats another tenant's memory as a duplicate.
+       */
+      getContentHashesByTenant(tenantId) {
+        const rows = this.stmtTenantHashes.all(tenantId);
+        return rows.map((r) => r.content_hash);
+      }
+      /**
+       * Return the first memory in the given tenant with the given content hash, or
+       * null (B1). The tenant-scoped counterpart to {@link findByContentHash}, so
+       * exact-hash dedup never crosses the tenant boundary.
+       */
+      findByContentHashAndTenant(hash, tenantId) {
+        const row = this.stmtFindByHashAndTenant.get(hash, tenantId);
+        return row !== void 0 ? rowToMemory(row) : null;
       }
       /** Count memories grouped by lifecycle state */
       countByLifecycle() {
@@ -40228,9 +40374,9 @@ var init_dist7 = __esm({
 });
 
 // ../qmd-team-intent-kb/apps/curator/dist/dedup/dedup-checker.js
-function checkDuplicate(candidate, memoryRepo) {
+function checkDuplicate(candidate, memoryRepo, tenantId) {
   const contentHash = computeContentHash(candidate.content);
-  const existing = memoryRepo.findByContentHash(contentHash);
+  const existing = tenantId !== void 0 ? memoryRepo.findByContentHashAndTenant(contentHash, tenantId) : memoryRepo.findByContentHash(contentHash);
   if (existing !== null) {
     return {
       isDuplicate: true,
@@ -40376,120 +40522,122 @@ function promote(input, memoryRepo, auditRepo, dryRun = false, linksRepo, evalCa
     version: 1
   });
   if (!dryRun) {
-    if (input.supersession !== void 0) {
-      const oldMemory = memoryRepo.findById(input.supersession.supersededMemoryId);
-      if (oldMemory !== null) {
-        const updatedOld = CuratedMemory.parse({
-          ...oldMemory,
-          lifecycle: "superseded",
-          supersession: {
-            supersededBy: memoryId,
-            reason: `Title similarity: ${input.supersession.similarity.toFixed(2)}`,
-            linkedAt: now
+    memoryRepo.connection.transaction(() => {
+      if (input.supersession !== void 0) {
+        const oldMemory = memoryRepo.findById(input.supersession.supersededMemoryId);
+        if (oldMemory !== null) {
+          const updatedOld = CuratedMemory.parse({
+            ...oldMemory,
+            lifecycle: "superseded",
+            supersession: {
+              supersededBy: memoryId,
+              reason: `Title similarity: ${input.supersession.similarity.toFixed(2)}`,
+              linkedAt: now
+            },
+            updatedAt: now
+          });
+          memoryRepo.update(updatedOld);
+        }
+        auditRepo.insert(AuditEvent.parse({
+          // Content-derived (bead 8da.5): identity is the superseded memory +
+          // the 'superseded' action + the superseding memory id as discriminator,
+          // so two clones supersede-by-the-same-memory mint the same audit id and
+          // hence the same v2 entry_hash at the same chain position.
+          id: deriveAuditEventId(input.supersession.supersededMemoryId, "superseded", memoryId),
+          action: "superseded",
+          memoryId: input.supersession.supersededMemoryId,
+          tenantId: input.candidate.tenantId,
+          actor: { type: "system", id: "curator" },
+          reason: `Superseded by ${memoryId}`,
+          details: {
+            newMemoryId: memoryId,
+            similarity: input.supersession.similarity
           },
-          updatedAt: now
-        });
-        memoryRepo.update(updatedOld);
+          timestamp: now
+        }));
       }
-      auditRepo.insert(AuditEvent.parse({
-        // Content-derived (bead 8da.5): identity is the superseded memory +
-        // the 'superseded' action + the superseding memory id as discriminator,
-        // so two clones supersede-by-the-same-memory mint the same audit id and
-        // hence the same v2 entry_hash at the same chain position.
-        id: deriveAuditEventId(input.supersession.supersededMemoryId, "superseded", memoryId),
-        action: "superseded",
-        memoryId: input.supersession.supersededMemoryId,
-        tenantId: input.candidate.tenantId,
-        actor: { type: "system", id: "curator" },
-        reason: `Superseded by ${memoryId}`,
-        details: {
-          newMemoryId: memoryId,
-          similarity: input.supersession.similarity
-        },
-        timestamp: now
-      }));
-    }
-    memoryRepo.insert(memory);
-    if (input.supersession !== void 0 && linksRepo) {
-      linksRepo.insert({
-        // Content-derived (bead 8da.5): a graph edge's identity is its
-        // (source, target, type) triple, stable across clones for the same
-        // logical promotion. Not part of the audit chain, but kept deterministic
-        // so the whole promotion is byte-reproducible across clones.
-        id: deriveLinkId(memoryId, input.supersession.supersededMemoryId, "supersedes"),
-        sourceMemoryId: memoryId,
-        targetMemoryId: input.supersession.supersededMemoryId,
-        linkType: "supersedes",
-        weight: input.supersession.similarity,
-        createdBy: "curator",
-        source: "curator",
-        importBatchId: null,
-        createdAt: now
-      });
-    }
-    if (linksRepo) {
-      const wikiLinks = extractWikiLinks(input.candidate.content);
-      for (const wl of wikiLinks) {
-        const targets = memoryRepo.searchByText(wl.slug);
-        const match = targets.find((m) => m.title.toLowerCase() === wl.slug.toLowerCase() && m.id !== memoryId);
-        if (match) {
-          try {
-            linksRepo.insert({
-              // Content-derived (bead 8da.5): (source, target, type) edge identity,
-              // stable across clones. See the supersedes edge above.
-              id: deriveLinkId(memoryId, match.id, "relates_to"),
-              sourceMemoryId: memoryId,
-              targetMemoryId: match.id,
-              linkType: "relates_to",
-              weight: 1,
-              createdBy: "curator",
-              source: "curator",
-              importBatchId: null,
-              createdAt: now
-            });
-          } catch {
+      memoryRepo.insert(memory);
+      if (input.supersession !== void 0 && linksRepo) {
+        linksRepo.insert({
+          // Content-derived (bead 8da.5): a graph edge's identity is its
+          // (source, target, type) triple, stable across clones for the same
+          // logical promotion. Not part of the audit chain, but kept deterministic
+          // so the whole promotion is byte-reproducible across clones.
+          id: deriveLinkId(memoryId, input.supersession.supersededMemoryId, "supersedes"),
+          sourceMemoryId: memoryId,
+          targetMemoryId: input.supersession.supersededMemoryId,
+          linkType: "supersedes",
+          weight: input.supersession.similarity,
+          createdBy: "curator",
+          source: "curator",
+          importBatchId: null,
+          createdAt: now
+        });
+      }
+      if (linksRepo) {
+        const wikiLinks = extractWikiLinks(input.candidate.content);
+        for (const wl of wikiLinks) {
+          const targets = memoryRepo.searchByText(wl.slug);
+          const match = targets.find((m) => m.title.toLowerCase() === wl.slug.toLowerCase() && m.id !== memoryId);
+          if (match) {
+            try {
+              linksRepo.insert({
+                // Content-derived (bead 8da.5): (source, target, type) edge identity,
+                // stable across clones. See the supersedes edge above.
+                id: deriveLinkId(memoryId, match.id, "relates_to"),
+                sourceMemoryId: memoryId,
+                targetMemoryId: match.id,
+                linkType: "relates_to",
+                weight: 1,
+                createdBy: "curator",
+                source: "curator",
+                importBatchId: null,
+                createdAt: now
+              });
+            } catch {
+            }
           }
         }
       }
-    }
-    auditRepo.insert(AuditEvent.parse({
-      // Content-derived (bead 8da.5): one 'promoted' event per memory, so the
-      // (memoryId, action) pair is already unique, so no discriminator needed.
-      id: deriveAuditEventId(memoryId, "promoted"),
-      action: "promoted",
-      memoryId,
-      tenantId: input.candidate.tenantId,
-      actor: { type: "system", id: "curator" },
-      reason: "Passed all governance rules",
-      details: { candidateId: input.candidate.id },
-      timestamp: now
-    }));
-    if (evalCallback !== void 0) {
-      try {
-        for (const verdict of evalCallback(memory, input.pipelineResult)) {
-          auditRepo.insert(AuditEvent.parse({
-            // Content-derived (bead 8da.5): several eval-result rows can be
-            // emitted per promotion, so the evaluator name discriminates them.
-            // Identical evaluator verdicts on two clones mint the same id.
-            id: deriveAuditEventId(memoryId, "eval-result", verdict.name),
-            action: "eval-result",
-            memoryId,
-            tenantId: input.candidate.tenantId,
-            actor: { type: "system", id: "curator" },
-            reason: `eval ${verdict.name}: ${verdict.passed ? "pass" : "fail"}`,
-            details: {
-              evaluator: verdict.name,
-              passed: verdict.passed,
-              score: verdict.score,
-              threshold: verdict.threshold,
-              ...verdict.details
-            },
-            timestamp: now
-          }));
+      auditRepo.insert(AuditEvent.parse({
+        // Content-derived (bead 8da.5): one 'promoted' event per memory, so the
+        // (memoryId, action) pair is already unique, so no discriminator needed.
+        id: deriveAuditEventId(memoryId, "promoted"),
+        action: "promoted",
+        memoryId,
+        tenantId: input.candidate.tenantId,
+        actor: { type: "system", id: "curator" },
+        reason: "Passed all governance rules",
+        details: { candidateId: input.candidate.id },
+        timestamp: now
+      }));
+      if (evalCallback !== void 0) {
+        try {
+          for (const verdict of evalCallback(memory, input.pipelineResult)) {
+            auditRepo.insert(AuditEvent.parse({
+              // Content-derived (bead 8da.5): several eval-result rows can be
+              // emitted per promotion, so the evaluator name discriminates them.
+              // Identical evaluator verdicts on two clones mint the same id.
+              id: deriveAuditEventId(memoryId, "eval-result", verdict.name),
+              action: "eval-result",
+              memoryId,
+              tenantId: input.candidate.tenantId,
+              actor: { type: "system", id: "curator" },
+              reason: `eval ${verdict.name}: ${verdict.passed ? "pass" : "fail"}`,
+              details: {
+                evaluator: verdict.name,
+                passed: verdict.passed,
+                score: verdict.score,
+                threshold: verdict.threshold,
+                ...verdict.details
+              },
+              timestamp: now
+            }));
+          }
+        } catch {
         }
-      } catch {
       }
-    }
+    }).immediate();
   }
   return memory;
 }
@@ -40559,7 +40707,7 @@ var init_curator = __esm({
        */
       processSingle(candidate, existingHashes) {
         const contentHash = computeContentHash(candidate.content);
-        const dedup = checkDuplicate(candidate, this.deps.memoryRepo);
+        const dedup = checkDuplicate(candidate, this.deps.memoryRepo, this.config.tenantId);
         if (dedup.isDuplicate) {
           return {
             candidateId: candidate.id,
@@ -40584,13 +40732,14 @@ var init_curator = __esm({
           });
         }
         const pipeline = new PolicyPipeline(policy);
-        const hashSet = existingHashes ?? new Set(this.deps.memoryRepo.getAllContentHashes());
+        const hashSet = existingHashes ?? new Set(this.deps.memoryRepo.getContentHashesByTenant(this.config.tenantId));
         const pipelineResult = pipeline.evaluate(candidate, {
           existingHashes: hashSet,
           tenantId: this.config.tenantId
         });
+        const suppressReject = this.config.dryRun === true || this.config.suppressRejectionReceipts === true;
         if (pipelineResult.outcome === "rejected") {
-          const reason = reject(candidate, pipelineResult, this.deps.auditRepo, this.config.dryRun);
+          const reason = reject(candidate, pipelineResult, this.deps.auditRepo, suppressReject);
           return {
             candidateId: candidate.id,
             outcome: "rejected",
@@ -40599,7 +40748,7 @@ var init_curator = __esm({
           };
         }
         if (pipelineResult.outcome === "flagged") {
-          const reason = reject(candidate, pipelineResult, this.deps.auditRepo, this.config.dryRun);
+          const reason = reject(candidate, pipelineResult, this.deps.auditRepo, suppressReject);
           return {
             candidateId: candidate.id,
             outcome: "flagged",
@@ -40622,7 +40771,7 @@ var init_curator = __esm({
         let rejected = 0;
         let flagged = 0;
         let duplicates = 0;
-        const existingHashes = new Set(this.deps.memoryRepo.getAllContentHashes());
+        const existingHashes = new Set(this.deps.memoryRepo.getContentHashesByTenant(this.config.tenantId));
         for (const candidate of candidates) {
           const result = this.processSingle(candidate, existingHashes);
           results.push(result);
@@ -40722,8 +40871,25 @@ async function ingestFromSpoolDetailed(candidateRepo, spoolDir, opts) {
         throw e;
       }
     }
+    if (opts?.archiveIngestedDir !== void 0) {
+      await archiveIngestedFile(filepath, opts.archiveIngestedDir);
+    }
   }
   return { ok: true, value: { ingested, tampered, rejected } };
+}
+async function archiveIngestedFile(spoolFilePath, archiveDir) {
+  try {
+    await (0, import_promises3.mkdir)(archiveDir, { recursive: true });
+    const dest = (0, import_node_path10.join)(archiveDir, (0, import_node_path10.basename)(spoolFilePath));
+    await (0, import_promises3.rename)(spoolFilePath, dest);
+    try {
+      await (0, import_promises3.rename)(`${spoolFilePath}.manifest.json`, `${dest}.manifest.json`);
+    } catch {
+    }
+  } catch (e) {
+    process.stderr.write(`[spool-intake] archive skipped for ${(0, import_node_path10.basename)(spoolFilePath)}: ${e instanceof Error ? e.message : String(e)}
+`);
+  }
 }
 async function quarantineTamperedFile(spoolFilePath, spoolDir, quarantineDirOverride, expected, actual) {
   try {
@@ -41892,8 +42058,10 @@ function loadTeamConfig(env = process.env) {
   let parsed;
   try {
     parsed = JSON.parse(text);
-  } catch (e) {
-    throw new TeamConfigError(`${path} is not valid JSON: ${e.message}`);
+  } catch {
+    throw new TeamConfigError(
+      `${path} is not valid JSON \u2014 could not parse it. Check for a trailing comma or an unquoted value.`
+    );
   }
   if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) {
     throw new TeamConfigError(
@@ -41905,6 +42073,12 @@ function loadTeamConfig(env = process.env) {
   for (const key of Object.keys(KEY_TO_ENV)) {
     const v = obj[key];
     if (typeof v === "string" && v.trim() !== "") config2[key] = v.trim();
+  }
+  if (config2.apiUrl === void 0) {
+    const found = Object.keys(obj);
+    throw new TeamConfigError(
+      `${path} has no usable "apiUrl" \u2014 a team config must set at least { "apiUrl": "http://..." } (camelCase). Found keys: ${found.length ? found.join(", ") : "(none)"}. Fix the spelling, or remove the file to run the local brain.`
+    );
   }
   return { present: true, config: config2, path };
 }
