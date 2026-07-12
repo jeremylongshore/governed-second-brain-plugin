@@ -23,7 +23,7 @@
  *   TEAMKB_API_TOKEN  — per-user bearer token (sent as Authorization: Bearer).
  */
 import { createHash } from 'node:crypto';
-import { existsSync, mkdirSync, readdirSync, readFileSync, unlinkSync, writeFileSync } from 'node:fs';
+import { mkdir, readdir, readFile, unlink, writeFile } from 'node:fs/promises';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
@@ -126,75 +126,91 @@ export function outboxDir(): string {
   return o !== undefined && o !== '' ? o : join(homedir(), '.teamkb-outbox');
 }
 
-/** Queue a candidate that could not be delivered (network throw / 5xx). Best-effort. */
-function enqueueOutbox(candidate: { id: string }): void {
+/**
+ * Queue a candidate that could not be delivered (network throw / 5xx). Async +
+ * non-blocking (this is a long-running MCP server — sync FS would block the event
+ * loop). Returns true iff it was durably written, so the caller can report an honest
+ * outcome when even the outbox write failed (the capture would otherwise be lost).
+ */
+async function enqueueOutbox(candidate: { id: string }): Promise<boolean> {
   const dir = outboxDir();
   try {
-    mkdirSync(dir, { recursive: true, mode: 0o700 });
-    writeFileSync(join(dir, `${candidate.id}.json`), JSON.stringify(candidate), { mode: 0o600 });
+    await mkdir(dir, { recursive: true, mode: 0o700 });
+    await writeFile(join(dir, `${candidate.id}.json`), JSON.stringify(candidate), { mode: 0o600 });
+    return true;
   } catch (e) {
     process.stderr.write(
       `[governed-brain:team] outbox enqueue failed: ${e instanceof Error ? e.message : String(e)}\n`,
     );
+    return false;
   }
 }
 
+// A drain runs at most ONE at a time: concurrent captures (two overlapping tool
+// calls) must not both process the same outbox file and double-POST it.
+let draining = false;
+
 /**
- * Drain the outbox: re-POST each queued candidate. Remove on a definitive response
- * (2xx delivered, or 4xx permanent reject — logged), STOP on a 5xx or a network
- * throw (still down — keep the rest queued for a later drain). Returns the count
- * delivered/cleared. Never throws — a drain failure must not fail the capture.
+ * Drain the outbox: re-POST each queued candidate. Remove on a definitive outcome
+ * (2xx delivered, or a NON-transient 4xx permanent reject — logged); STOP (keep the
+ * rest queued) on a TRANSIENT status (5xx, or 429/408 rate-limit/timeout) or a
+ * network throw. Async, non-blocking, single-flight, and never throws — a drain
+ * failure must not fail the capture that triggered it.
  */
 export async function drainOutbox(): Promise<number> {
   if (API_URL === undefined || API_URL === '') return 0;
-  const dir = outboxDir();
-  if (!existsSync(dir)) return 0;
-  let files: string[];
+  if (draining) return 0; // single-flight guard
+  draining = true;
   try {
-    files = readdirSync(dir).filter((f) => f.endsWith('.json'));
-  } catch {
-    return 0;
-  }
-  let cleared = 0;
-  for (const f of files) {
-    const path = join(dir, f);
-    let body: string;
+    const dir = outboxDir();
+    let files: string[];
     try {
-      body = readFileSync(path, 'utf8');
-      JSON.parse(body); // validate — a corrupt file is dropped below, not retried forever
+      files = (await readdir(dir)).filter((f) => f.endsWith('.json'));
     } catch {
+      return 0; // dir absent / unreadable → nothing to drain
+    }
+    let cleared = 0;
+    for (const f of files) {
+      const path = join(dir, f);
+      let body: string;
       try {
-        unlinkSync(path);
+        body = await readFile(path, 'utf8');
+        JSON.parse(body); // validate — a corrupt file is dropped below, not retried forever
       } catch {
-        /* ignore */
+        await unlink(path).catch(() => {});
+        continue;
       }
-      continue;
-    }
-    let res: Response;
-    try {
-      res = await fetch(`${API_URL.replace(/\/+$/, '')}/api/candidates`, {
-        method: 'POST',
-        headers: authHeaders(),
-        body,
-      });
-    } catch {
-      break; // still offline — keep this + the rest queued
-    }
-    if (res.ok || (res.status >= 400 && res.status < 500)) {
-      if (!res.ok) {
-        process.stderr.write(`[governed-brain:team] outbox: dropping ${f} on ${res.status} (permanent)\n`);
-      }
+      let res: Response;
       try {
-        unlinkSync(path);
-        cleared++;
+        res = await fetch(`${API_URL.replace(/\/+$/, '')}/api/candidates`, {
+          method: 'POST',
+          headers: authHeaders(),
+          body,
+        });
       } catch {
-        /* ignore */
+        break; // still offline — keep this + the rest queued
       }
-    } else {
-      break; // 5xx — server error, retry on a later drain
+      // 429 (rate-limited) + 408 (timeout) are TRANSIENT — keep them queued and retry
+      // later, exactly like a 5xx. Only a non-transient 4xx (validation/auth) is a
+      // permanent reject worth dropping.
+      const transient = res.status === 429 || res.status === 408;
+      if (res.ok || (res.status >= 400 && res.status < 500 && !transient)) {
+        if (!res.ok) {
+          process.stderr.write(`[governed-brain:team] outbox: dropping ${f} on ${res.status} (permanent)\n`);
+        }
+        await unlink(path)
+          .then(() => {
+            cleared++;
+          })
+          .catch(() => {});
+      } else {
+        break; // 5xx or transient 4xx — retry on a later drain
+      }
     }
+    return cleared;
+  } finally {
+    draining = false;
   }
-  return cleared;
 }
 
 interface CitedHit {
@@ -375,27 +391,32 @@ export async function capture(
     });
   } catch (e) {
     // API unreachable (dead / off-tailnet). DON'T drop it — queue to the durable
-    // outbox and report queued (not an error): the next successful capture drains it.
-    enqueueOutbox(candidate);
+    // outbox; the next successful capture drains it. If even the queue write fails,
+    // report honestly (ok:false) — the capture would otherwise be silently lost.
+    const queued = await enqueueOutbox(candidate);
     return jsonResult({
-      ok: true,
-      queued: true,
+      ok: queued,
+      queued,
       candidateId: candidate.id,
       tenantId: TENANT_ID,
-      message: `Could not reach the brain (${e instanceof Error ? e.message : String(e)}). Queued to the durable outbox — it will be sent on the next successful capture. Nothing was lost.`,
+      message: queued
+        ? `Could not reach the brain (${e instanceof Error ? e.message : String(e)}). Queued to the durable outbox — it will be sent on the next successful capture. Nothing was lost.`
+        : `Could not reach the brain (${e instanceof Error ? e.message : String(e)}) AND could not write the durable outbox — this capture was NOT saved. Please retry.`,
     });
   }
   if (!res.ok) {
     // 5xx = transient server error → queue (retry later). 4xx = a real rejection
     // (validation/auth/disclosure) → surface it; queuing would just loop.
     if (res.status >= 500) {
-      enqueueOutbox(candidate);
+      const queued = await enqueueOutbox(candidate);
       return jsonResult({
-        ok: true,
-        queued: true,
+        ok: queued,
+        queued,
         candidateId: candidate.id,
         tenantId: TENANT_ID,
-        message: `The brain returned ${res.status}. Queued to the durable outbox — it will be retried on the next successful capture. Nothing was lost.`,
+        message: queued
+          ? `The brain returned ${res.status}. Queued to the durable outbox — it will be retried on the next successful capture. Nothing was lost.`
+          : `The brain returned ${res.status} AND the durable outbox write failed — this capture was NOT saved. Please retry.`,
       });
     }
     return errorResult(res);

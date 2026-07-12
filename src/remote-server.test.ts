@@ -414,4 +414,18 @@ describe('capture — idempotency + durable outbox (jfv.9)', () => {
     expect(n).toBe(0);
     expect(readdirSync(box).length).toBe(1); // kept for a later drain
   });
+
+  it('drainOutbox KEEPS a queued item on a transient 429 (rate-limited), drops on a permanent 4xx', async () => {
+    const box = mkbox();
+    writeFileSync(join(box, 'q1.json'), JSON.stringify({ id: 'q1', content: 'x' }));
+    const { drainOutbox } = await load({ TEAMKB_API_URL: 'http://brain:3847', TEAMKB_OUTBOX_DIR: box });
+    // 429 = transient → keep it queued (a rate-limit is not a permanent reject).
+    vi.stubGlobal('fetch', vi.fn(async () => new Response('slow down', { status: 429 })));
+    expect(await drainOutbox()).toBe(0);
+    expect(readdirSync(box).length).toBe(1);
+    // 422 = permanent reject → drop it (it will never succeed).
+    vi.stubGlobal('fetch', vi.fn(async () => new Response('bad', { status: 422 })));
+    expect(await drainOutbox()).toBe(1);
+    expect(readdirSync(box).length).toBe(0);
+  });
 });
