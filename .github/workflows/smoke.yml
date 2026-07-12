@@ -64,3 +64,9 @@ jobs:
       # snake_case → loud refusal). Zero egress — team mode opens no socket at boot.
       - name: Smoke — mode dispatch + fail-closed (team.json fallback)
         run: node --test smoke/mode-dispatch.test.mjs
+
+      # jfv.7: the opt-in auto-capture hook's SAFETY guards — it must stay a silent
+      # no-op unless deliberately enabled (marker + team mode + non-recursive + a real
+      # transcript). Zero egress (a stub `claude` on PATH; no model invoked).
+      - name: Smoke — auto-capture hook guards (opt-in, no-op unless enabled)
+        run: node --test smoke/autocapture-hook.test.mjs
