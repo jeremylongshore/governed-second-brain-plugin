@@ -242,7 +242,11 @@ export async function search(
     res = await fetch(url, {
       method: 'POST',
       headers: authHeaders(),
-      body: JSON.stringify({ query, scope, pagination: { page: 1, pageSize: limit } }),
+      // Send the tenant — the API's /api/search scopes qmd by tenantId and returns
+      // ZERO hits without it (unlike capture, which carried tenantId in the candidate).
+      // TENANT_ID defaults to the shared 'intent-solutions' tenant; a scoped teammate
+      // token still has its tenantId validated server-side by the tenancy guard.
+      body: JSON.stringify({ query, scope, tenantId: TENANT_ID, pagination: { page: 1, pageSize: limit } }),
     });
   } catch (e) {
     // fetch() itself threw — dead API, off-tailnet, DNS failure. Surface it.
