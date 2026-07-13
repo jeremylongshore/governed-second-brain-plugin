@@ -69,3 +69,40 @@ jobs:
             exit 0
           fi
           exit "${rc:-0}"
+
+  anchor-conformance:
+    name: Anchor conformance (store ↔ standalone)
+    # 6ps.11: cross-check the store's verifyAnchors against the INDEPENDENT standalone
+    # verify-anchors.mjs on ONE shared fixture, so they can't silently split-brain. The
+    # `quality` job strips the build-only @qmd-team-intent-kb/* sibling links; provision
+    # the PUBLIC sibling store here and assert 0 skips — the conformance cases MUST run.
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - name: Checkout the plugin
+        uses: actions/checkout@v4
+        with:
+          path: governed-second-brain-plugin
+      - name: Checkout the sibling store (public)
+        uses: actions/checkout@v4
+        with:
+          repository: jeremylongshore/qmd-team-intent-kb
+          path: qmd-team-intent-kb
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Build the sibling store (tsc -b → the dist the plugin's link dep resolves to)
+        working-directory: qmd-team-intent-kb
+        run: |
+          pnpm install --frozen-lockfile
+          pnpm build
+      - name: Install the plugin (keep the @qmd-team-intent-kb/* links → the built sibling)
+        working-directory: governed-second-brain-plugin
+        run: npm install --no-audit --no-fund
+      - name: Anchor conformance (store present → all cases enforced, 0 skipped)
+        working-directory: governed-second-brain-plugin
+        run: |
+          out=$(node --test scripts/anchor-conformance.test.mjs 2>&1) || { echo "$out"; exit 1; }
+          echo "$out" | tail -12
+          echo "$out" | grep -q '# skipped 0' || { echo "::error::conformance store cases SKIPPED — the sibling store was not provisioned"; exit 1; }
