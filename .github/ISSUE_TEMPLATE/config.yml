@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Security Vulnerability
+    url: https://github.com/jeremylongshore/governed-second-brain-plugin/blob/main/SECURITY.md
+    about: Please report security vulnerabilities privately — see SECURITY.md. Do NOT open a public issue.
+  - name: Questions & Getting Help
+    url: https://github.com/jeremylongshore/governed-second-brain-plugin/blob/main/SUPPORT.md
+    about: For questions and general help, see SUPPORT.md before filing an issue.
