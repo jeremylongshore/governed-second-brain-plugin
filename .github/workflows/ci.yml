@@ -59,6 +59,15 @@ jobs:
       - name: Anchor-verifier unit tests (zero-dep node:test)
         run: node --test scripts/verify-anchors.test.mjs
 
+      # Two-implementation anchor-log CONFORMANCE (bead compile-then-govern-6ps.11):
+      # INTKB `verifyAnchors` vs the standalone `verify-anchors.mjs` must agree on a
+      # normalised break-set + `ok` for every shared fixture. It imports the `link:`
+      # INTKB store (stripped above, absent in a fresh checkout), so it self-SKIPS
+      # here and is a LOCAL-authoritative gate — exactly like the full build/smoke.
+      # Wired in so it auto-activates if the sibling monorepo ever resolves in CI.
+      - name: Anchor-log conformance (self-skips without the sibling monorepo)
+        run: node --test scripts/anchor-conformance.test.mjs
+
       - name: Audit-harness verify (hash-pinned gate configs)
         # Exit 3 (no manifest) is tolerated so a future manifest reset doesn't hard-fail;
         # exit 2 = HARNESS_TAMPERED (a gate config was changed without re-pinning).
