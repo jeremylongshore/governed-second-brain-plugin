@@ -1,6 +1,6 @@
 # governed-second-brain-plugin ("Bob's Big Brain" plugin) — review context for Greptile
 
-The single installable Claude Code + Cowork plugin for the Governed Second Brain. **One plugin, two
+The single installable Claude Code + Cowork plugin for Bob's Big Brain. **One plugin, two
 runtime modes** dispatched at startup by `TEAMKB_API_URL`:
 
 - **local** (default, no `TEAMKB_API_URL`): the in-process governed brain over `~/.teamkb` — full

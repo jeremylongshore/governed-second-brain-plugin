@@ -1,10 +1,10 @@
 # AGENTS.md
 
-Agent + developer guidance for the **Governed Second Brain plugin** repo. Tool-agnostic; `CLAUDE.md` points here.
+Agent + developer guidance for the **Bob's Big Brain plugin** repo. Tool-agnostic; `CLAUDE.md` points here.
 
 ## What this is
 
-The **unified, public Governed Second Brain plugin** — a Claude Code + Cowork plugin that runs as a
+The **unified, public Bob's Big Brain plugin** — a Claude Code + Cowork plugin that runs as a
 single stdio MCP server in **two modes**:
 
 - **local** (default): an in-process governed brain over your own files (`~/.teamkb`) — no daemon, no

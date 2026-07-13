@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Governed Second Brain — unified entry point (one plugin, two modes).
+ * Bob's Big Brain — unified entry point (one plugin, two modes).
  *
  * ONE plugin, dispatched at startup by whether TEAMKB_API_URL is set:
  *

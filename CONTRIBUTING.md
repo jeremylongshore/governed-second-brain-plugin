@@ -1,6 +1,6 @@
 # Contributing
 
-This is the installable **Governed Second Brain** plugin — a local stdio MCP server (read + write)
+This is the installable **Bob's Big Brain** plugin — a local stdio MCP server (read + write)
 that drives the engines over a brain that stays 100% on your machine. Contributions to the plugin
 itself (the MCP server, its tools, the install/packaging path, docs) are welcome here.
 

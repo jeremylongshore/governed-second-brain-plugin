@@ -90,7 +90,7 @@ async function confirm(question) {
 
 async function preflight(folder, args, fileCount) {
   log('');
-  log(C.bold('  Governed Second Brain — pre-flight'));
+  log(C.bold('  Bob's Big Brain — pre-flight'));
   log('  ' + C.dim('─'.repeat(58)));
   log(`  Mode        ${args.indexOnly ? C.green('index-only (no LLM egress)') : C.yellow('full compile (egresses to Anthropic)')}`);
   log(`  Source      ${folder}  ${C.dim(`(${fileCount} text file${fileCount === 1 ? '' : 's'})`)}`);

@@ -1,5 +1,5 @@
 /**
- * Governed Second Brain — the ~/.teamkb/team.json config-file fallback.
+ * Bob's Big Brain — the ~/.teamkb/team.json config-file fallback.
  *
  * The onboarding day-killer this fixes: a teammate sets TEAMKB_API_URL /
  * TEAMKB_API_TOKEN in ~/.zshrc, but a GUI/Dock-launched Claude never sources

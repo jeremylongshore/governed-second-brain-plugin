@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Governed Second Brain — team mode (remote proxy).
+ * Bob's Big Brain — team mode (remote proxy).
  *
  * The same plugin, in TEAM mode: a self-contained stdio server that proxies the
  * read tools (`brain_search`, `brain_status`), the member write tool

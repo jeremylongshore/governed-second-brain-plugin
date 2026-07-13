@@ -1,5 +1,5 @@
 /**
- * Governed Second Brain — mode resolution (the local-vs-team dispatch predicate).
+ * Bob's Big Brain — mode resolution (the local-vs-team dispatch predicate).
  *
  * Extracted verbatim from the entry point (src/index.ts) so the exact rule that
  * decides whether the plugin runs the in-process LOCAL brain or proxies a remote

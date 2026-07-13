@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Governed Second Brain — local, in-process MCP server.
+ * Bob's Big Brain — local, in-process MCP server.
  *
  * A self-contained stdio server that drives qmd + the deterministic govern
  * kernel + the local ~/.teamkb store DIRECTLY, in-process. No daemon, no HTTP,
