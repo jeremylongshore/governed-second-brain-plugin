@@ -102,9 +102,9 @@ jobs:
         run: |
           pnpm install --frozen-lockfile
           pnpm build
-      - name: Install the plugin (keep the @qmd-team-intent-kb/* links → the built sibling)
+      - name: Install the plugin with pnpm (npm can't do link:; pnpm resolves it → built sibling)
         working-directory: governed-second-brain-plugin
-        run: npm install --no-audit --no-fund
+        run: pnpm install --no-frozen-lockfile
       - name: Anchor conformance (store present → all cases enforced, 0 skipped)
         working-directory: governed-second-brain-plugin
         run: |
