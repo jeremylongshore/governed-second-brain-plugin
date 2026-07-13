@@ -73,6 +73,29 @@ function cleanup(dir) {
   rmSync(dir, { recursive: true, force: true });
 }
 
+/**
+ * Seed a throwaway teamkb.db with an `audit_events(seq, entry_hash)` table — the
+ * two columns the standalone verifier's --db cross-check reads: `chainedRows`
+ * non-null rows (seq 1..N) whose highest-seq row's entry_hash == headHash. Built
+ * with the sqlite3 CLI (the same binary the verifier shells out to), so the test
+ * needs no native module. The intermediate rows carry distinct valid-hex dummy
+ * hashes; only the count and the head matter to the cross-check.
+ */
+function makeAuditDb(dir, { chainedRows, headHash }) {
+  const dbPath = join(dir, 'teamkb.db');
+  const values = [];
+  for (let i = 1; i <= chainedRows; i++) {
+    const h = i === chainedRows ? headHash : i.toString(16).padStart(2, '0').repeat(32);
+    values.push(`(${i}, '${h}')`);
+  }
+  const sql =
+    'CREATE TABLE audit_events (seq INTEGER PRIMARY KEY, entry_hash TEXT);\n' +
+    `INSERT INTO audit_events (seq, entry_hash) VALUES ${values.join(',')};`;
+  const r = spawnSync('sqlite3', [dbPath, sql], { encoding: 'utf8' });
+  if (r.status !== 0) throw new Error(`sqlite3 seed failed: ${(r.stderr || '').trim()}`);
+  return dbPath;
+}
+
 // ─── (a) a valid 3-record log ────────────────────────────────────────────────
 
 test('(a) valid 3-record log — records verify clean; verdict is PASS with a remote', () => {
@@ -299,3 +322,59 @@ for (const argv of [['--anchors'], ['--db'], ['--audit-dir'], ['--anchors', '--j
     assert.match(r.stderr + r.stdout, /requires an argument/);
   });
 }
+
+// ─── (e/f/g) the --db cross-check: the anchor as an EXTERNAL WITNESS ──────────
+// Every test above passes db:null, so the whole reason the anchor exists — to
+// catch a local rewrite the in-DB verifier cannot — was untested. These exercise
+// verifyDbCrossCheck against a real sqlite audit_events table. The latest anchor
+// (validThreeRecords → r2) froze { chainedRows: 30, chainHead: 'c'*64 }.
+
+test('(e) --db cross-check PASSES when the live chain head matches the latest anchor', () => {
+  const records = validThreeRecords();
+  const { dir, anchorsPath } = writeLog(records, { commit: true, addRemote: true });
+  try {
+    const db = makeAuditDb(dir, { chainedRows: 30, headHash: 'c'.repeat(64) });
+    const res = verify({ anchors: anchorsPath, auditDir: dir, db });
+    assert.equal(res.verdict, 'PASS', JSON.stringify(res.findings));
+    assert.equal(res.findings.filter((f) => f.reason === 'HISTORY_REWRITTEN').length, 0);
+    // and the check actually RAN — not silently skipped
+    assert.equal(res.findings.some((f) => f.reason === 'DB_CHECK_SKIPPED'), false);
+  } finally {
+    cleanup(dir);
+  }
+});
+
+test('(f) re-hash-forward is CAUGHT BY THE ANCHOR though the DB chain is internally valid', () => {
+  // The executable form of the README trust-model box: a local writer edits an
+  // event and re-hashes the chain FORWARD — same row count, a new head that is
+  // internally consistent, so the in-DB brain_audit_verify (which re-anchors on
+  // each stored entry_hash) returns ok:true. The externally-committed anchor is
+  // the ONLY witness that the head at the anchored position (30 rows) changed.
+  const records = validThreeRecords();
+  const { dir, anchorsPath } = writeLog(records, { commit: true, addRemote: true });
+  try {
+    const db = makeAuditDb(dir, { chainedRows: 30, headHash: 'f'.repeat(64) });
+    const res = verify({ anchors: anchorsPath, auditDir: dir, db });
+    const rewrite = res.findings.filter((f) => f.reason === 'HISTORY_REWRITTEN');
+    assert.equal(rewrite.length, 1, JSON.stringify(res.findings));
+    assert.match(rewrite[0].detail, /the head at the anchored position changed/);
+    assert.equal(res.verdict, 'FAIL');
+  } finally {
+    cleanup(dir);
+  }
+});
+
+test('(g) history truncation below the anchored position is caught by the anchor', () => {
+  const records = validThreeRecords();
+  const { dir, anchorsPath } = writeLog(records, { commit: true, addRemote: true });
+  try {
+    const db = makeAuditDb(dir, { chainedRows: 20, headHash: 'c'.repeat(64) });
+    const res = verify({ anchors: anchorsPath, auditDir: dir, db });
+    const rewrite = res.findings.filter((f) => f.reason === 'HISTORY_REWRITTEN');
+    assert.equal(rewrite.length, 1, JSON.stringify(res.findings));
+    assert.match(rewrite[0].detail, /history truncated/);
+    assert.equal(res.verdict, 'FAIL');
+  } finally {
+    cleanup(dir);
+  }
+});
