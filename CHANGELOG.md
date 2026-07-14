@@ -8,6 +8,13 @@ installable Claude Code + Cowork plugin (a local stdio MCP server); the engines 
 
 ## [Unreleased]
 
+### Changed
+
+- **Onboarding is one universal path.** `onboarding/README.md` (and the live page at
+  `demos.intentsolutions.io/bbb/`) lead with a single paste-to-Claude prompt for Mac *and* Windows —
+  install from the public marketplace + write `~/.teamkb/team.json` with required `tenantId`. No
+  OS-specific installer is required; the macOS `.command` is demoted to a legacy footnote.
+
 ### Fixed
 
 - **`/brain` now retries with keywords when a full-sentence question returns nothing.** Retrieval is
