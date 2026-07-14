@@ -9,7 +9,7 @@ description: |
   "what's my deploy runbook"). Trigger with "/brain", "ask the brain",
   "what do I know about", or "check my knowledge base".
 allowed-tools: 'mcp__governed-brain__brain_search'
-version: 1.0.0
+version: 1.1.0
 author: Jeremy Longshore <jeremy@intentsolutions.io>
 license: Apache-2.0
 compatibility: 'Designed for Claude Code; ships with the governed-second-brain plugin, which auto-wires the governed-brain MCP server. Works in both modes: local (in-process, needs qmd on PATH) and team (proxies to your team brain when TEAMKB_API_URL is set). Same brain_search either way.'
@@ -58,6 +58,18 @@ brain_search({ query: "the user's question, lightly cleaned up", scope: "curated
 The tool returns `{ source, results: [{ citation, snippet, score, collection }] }`.
 Each `citation` is a `qmd://COLLECTION/FILENAME` URI — the receipt for that hit.
 
+**If `results` is empty, retry once with just the strong keywords.** Retrieval matches on
+**all** query terms (keyword AND), so a full natural-language question — "what did the team ship
+this week?" — can come back empty even when the topic is well covered. Before you report nothing,
+drop the filler and question words (what/why/how/who, this/the/a/of, did/does/is) and re-run with the
+1–3 distinctive nouns/verbs only:
+
+```
+brain_search({ query: "shipped week", scope: "curated" })   // retry: keywords, not a sentence
+```
+
+Only treat the topic as genuinely uncovered (Step 3) after this keyword retry also returns empty.
+
 ### Step 2: Answer ONLY from the cited results
 
 - Synthesize a direct answer from the returned snippets.
@@ -70,9 +82,9 @@ Each `citation` is a `qmd://COLLECTION/FILENAME` URI — the receipt for that hi
 
 ### Step 3: Handle an empty result honestly
 
-If `results` is empty, say so plainly: the brain has nothing governed on that topic.
-Do **not** fall back to general knowledge and present it as the brain's answer.
-Optionally note that the topic may need to be captured (run `/brain-save`).
+If `results` is **still** empty after the keyword retry in Step 1, say so plainly: the brain has
+nothing governed on that topic. Do **not** fall back to general knowledge and present it as the
+brain's answer. Optionally note that the topic may need to be captured (run `/brain-save`).
 
 ## Output
 

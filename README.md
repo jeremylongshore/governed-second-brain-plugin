@@ -132,6 +132,36 @@ You need network reachability to that API — typically a private network / VPN 
 (the brain is meant to stay off the public internet). The dispatcher auto-detects mode from
 `TEAMKB_API_URL`: set → team, unset → local. Same `/brain` + `/brain-save` skills either way.
 
+#### Install it as a team member
+
+The plugin runs in **Claude Code** or **Cowork** — the same install in both. It **cannot** run in
+claude.ai in a web browser or the phone apps (a browser tab can't reach a local plugin or a private
+network); **Claude Desktop** can, via a manual `mcpServers` config (see below). On macOS **or** Windows:
+
+1. **Join the team network** (Tailscale) so your machine can reach the brain's API.
+2. **Add the plugin** — in Claude Code or Cowork. It's a public repo, so no org membership or `gh`
+   login is needed:
+   ```
+   /plugin marketplace add jeremylongshore/governed-second-brain-plugin
+   /plugin install governed-second-brain@governed-second-brain
+   ```
+3. **Save your connection** to `~/.teamkb/team.json` (Windows: `%USERPROFILE%\.teamkb\team.json`) at
+   mode `600`. This file is read **before** shell env vars, so a Dock/GUI-launched Claude still reaches
+   team mode:
+   ```json
+   {
+     "apiUrl": "https://your-team-brain:3847",
+     "apiToken": "<your per-user token>",
+     "tenantId": "<your tenant, e.g. intent-solutions>"
+   }
+   ```
+4. **Restart the app**, then ask with **keywords** (retrieval is keyword-based, so strong words beat a
+   full sentence): `/brain shipped this week`. A cited `qmd://` answer means you're connected.
+
+macOS + Claude Code has a one-click installer that does steps 2–3 for you, and there's a full
+per-platform walkthrough (incl. the **Claude Desktop** `mcpServers` config) in
+[`onboarding/`](onboarding/README.md).
+
 In team mode the tool surface is **`brain_search`** (read) + **`brain_capture`** (propose) +
 **`brain_transition`** (admin-only) — govern runs server-side, so there's no client `brain_govern`:
 **the model proposes, the server disposes**, and each promotion gets a hash-chained receipt. A member

@@ -8,6 +8,24 @@ installable Claude Code + Cowork plugin (a local stdio MCP server); the engines 
 
 ## [Unreleased]
 
+### Fixed
+
+- **`/brain` now retries with keywords when a full-sentence question returns nothing.** Retrieval is
+  keyword-AND, so a natural question ("what did the team ship this week?") could return zero even when
+  the topic is well covered — a new user running the suggested proof query saw an empty result and
+  assumed the setup was broken. The `/brain` skill now drops filler/question words and retries once
+  with the strong keywords before reporting empty, and the onboarding proof query is now a keyword
+  query (`shipped this week`) in the README and the macOS installer. (The deeper retrieval-side
+  OR-fallback is tracked separately.)
+
+### Added
+
+- **Per-platform install instructions.** The README and `onboarding/README.md` now spell out that the
+  plugin runs in **Claude Code or Cowork** (same `/plugin` install), takes a **manual `mcpServers`
+  config on Claude Desktop**, and **cannot** run in claude.ai in a browser or the phone apps — plus a
+  **Windows** path (`/plugin` commands + `%USERPROFILE%\.teamkb\team.json`) alongside the macOS
+  one-click installer.
+
 ## [1.1.1] - 2026-07-13
 
 ### Fixed

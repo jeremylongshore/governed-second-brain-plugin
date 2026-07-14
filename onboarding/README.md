@@ -1,15 +1,63 @@
 # Onboarding — plug a teammate into Bob's Big Brain
 
-Two real steps for a non-technical teammate to go from zero to connected:
+The brain is a **plugin**, so it runs inside a **desktop** Claude — never a website.
 
-1. **Install Tailscale** and sign in with their `@intentsolutions.io` account
-   (this is the one genuinely-manual prerequisite — the GUI *Allow* dialogs can't
-   be automated).
-2. **Double-click [`install-bobs-big-brain.command`](install-bobs-big-brain.command).**
-   It checks tailnet reachability, takes their token (typed hidden), writes
-   `~/.teamkb/team.json` at mode `600`, and installs the plugin.
+| Where you run Claude | Works? | How |
+|---|---|---|
+| **Claude Code** or **Cowork** | ✅ recommended | The same `/plugin` install (below). macOS + Claude Code also has a one-click installer. |
+| **Claude Desktop** (standalone chat app) | ⚙️ manual | Add a custom `mcpServers` entry by hand (below). |
+| **claude.ai in a browser**, phone apps | ⛔ no | A browser tab can't reach a local plugin or a private network. Install Claude Code and use that. |
 
-That's it. The installer prints one green line and a `/brain` question to try.
+Every teammate needs two things: a **desktop Claude** (Claude Code is quickest) and **Tailscale**
+(so their machine can reach the brain over the private network — the one genuinely-manual
+prerequisite; the GUI *Allow* dialogs can't be automated).
+
+## Claude Code or Cowork (recommended)
+
+### macOS — one click (Claude Code)
+
+**Double-click [`install-bobs-big-brain.command`](install-bobs-big-brain.command).** It checks
+tailnet reachability, takes the token (typed hidden), writes `~/.teamkb/team.json` at mode `600`,
+and installs the plugin. It prints one green line and a `/brain` question to try. (On Cowork, or to
+do it by hand, use the manual steps below.)
+
+### Windows, or by hand (Claude Code or Cowork)
+
+1. **Add the plugin** — in Claude Code or Cowork. Public repo, so no org membership or `gh` login:
+   ```
+   /plugin marketplace add jeremylongshore/governed-second-brain-plugin
+   /plugin install governed-second-brain@governed-second-brain
+   ```
+2. **Write `team.json`** — `~/.teamkb/team.json` (Windows: `%USERPROFILE%\.teamkb\team.json`) at
+   mode `600`, using the shape below.
+3. **Restart the app**, then ask with **keywords**: `/brain shipped this week` → a cited `qmd://`
+   answer means you're connected. (Retrieval is keyword-based — strong words beat a full sentence;
+   0 hits usually means the query, not the setup — try a topic like `backup` or `deploy`.)
+
+## Claude Desktop (advanced — manual MCP config)
+
+Claude Desktop can run the brain but doesn't use the `/plugin` system — register it as a custom MCP
+server. Put the plugin's `governed-brain.cjs` on disk (from your Claude Code plugin install, or
+`npm install -g governed-second-brain`), then add to the Desktop config file — `%APPDATA%\Claude\claude_desktop_config.json`
+on Windows, `~/Library/Application Support/Claude/claude_desktop_config.json` on macOS:
+
+```json
+{
+  "mcpServers": {
+    "governed-brain": {
+      "command": "node",
+      "args": ["/full/path/to/plugin-runtime/governed-brain.cjs"],
+      "env": {
+        "TEAMKB_API_URL": "http://<brain-host>:3847",
+        "TEAMKB_API_TOKEN": "<your per-user token>",
+        "TEAMKB_TENANT_ID": "<your tenant>"
+      }
+    }
+  }
+}
+```
+
+Fully quit and reopen Claude Desktop; `brain_search` will be available.
 
 ## How the connection actually works
 
