@@ -58,13 +58,13 @@ brain_search({ query: "the user's question, lightly cleaned up", scope: "curated
 The tool returns `{ source, results: [{ citation, snippet, score, collection }] }`.
 Each `citation` is a `qmd://COLLECTION/FILENAME` URI — the receipt for that hit.
 
-**If `results` is empty, retry once with just the strong keywords.** Retrieval matches on
-**all** query terms (keyword AND), so a full natural-language question — "what did the team ship
-this week?" — can come back empty even when the topic is well covered. Before you report nothing,
-drop the filler and question words — question words (what/why/how/who), articles/determiners
-(this/the/a/of), auxiliaries (did/does/is), **and prepositions (in/on/at/to/for/with/by)** — and
-re-run with the 1–3 distinctive nouns/verbs only (under keyword-AND, one stray preposition that is
-not in the target document is enough to force 0 results):
+**If `results` is empty, retry once with just the strong keywords.** Retrieval ranks by term
+overlap, so piling extra filler and question words onto a query pushes the real hits out of the
+results — a full natural-language question like "what did the team ship this week?" comes back
+empty even when the topic is well covered, while `shipped this week` returns cited hits. Before you
+report nothing, drop the filler and question words — question words (what/why/how/who),
+articles/determiners (this/the/a/of), auxiliaries (did/does/is), and prepositions
+(in/on/at/to/for/with/by) — and re-run with the 1–3 distinctive nouns/verbs only:
 
 ```
 brain_search({ query: "shipped week", scope: "curated" })   // retry: keywords, not a sentence
