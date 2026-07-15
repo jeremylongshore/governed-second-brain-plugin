@@ -64,15 +64,16 @@ Each `citation` is a `qmd://COLLECTION/FILENAME` URI — the receipt for that hi
 
 **Empty-result ladder (do not stop after one miss):**
 
-1. **Keyword retry (curated):** if the first query was a long sentence, re-run with 1–4 keywords only.
+1. **Keyword retry (curated):** only if the first call was still a long natural-language sentence
+   (you skipped deriving 1–4 keywords). Re-run with 1–4 keywords only. **Skip this step** when the
+   first query was already keyword-style — do not re-call with the same tokens.
 2. **Scope retry (`all`):** if curated is still empty, re-run the **same keywords** with
-   `scope: "all"` (includes guides/decisions that may not be filtered the same way). Do **not**
-   use `inbox`/`archived` unless the user asks.
-3. Only after **both** keyword+curated and keyword+all are empty → Step 3 (honest refuse).
+   `scope: "all"`. Do **not** use `inbox`/`archived` unless the user asks.
+3. Only after curated+keywords and all+keywords are empty → Step 3 (honest refuse).
 
 ```
 brain_search({ query: "shipped week", scope: "curated" })
-// if empty:
+// if empty (keywords already used):
 brain_search({ query: "shipped week", scope: "all" })
 ```
 
@@ -91,6 +92,7 @@ brain_search({ query: "shipped week", scope: "all" })
 If `results` is **still** empty after the empty-result ladder in Step 1, say so plainly: the brain
 has nothing governed on that topic. Do **not** fall back to general knowledge and present it as the
 brain's answer. Optionally note that the topic may need to be captured (run `/brain-save`).
+
 ## Output
 
 1. A short, direct answer.
@@ -142,6 +144,6 @@ Sources:
 - [Bob's Big Brain umbrella](https://github.com/intent-solutions-io/bobs-big-brain-umbrella) — stack map.
 - [bobs-big-brain-plugin](https://github.com/jeremylongshore/bobs-big-brain-plugin) — this plugin.
 - [qmd-team-intent-kb](https://github.com/jeremylongshore/qmd-team-intent-kb) — govern layer + `bbb-qmd`.
-- [tobi/qmd](https://github.com/tobi/qmd) — retrieve engine (OSS; we pin, we do not fork).
+- [tobi/qmd](https://github.com/tobi/qmd) (npm `@tobilu/qmd`) — retrieve engine (OSS; we pin, we do not fork).
 - [intentional-cognition-os](https://github.com/jeremylongshore/intentional-cognition-os) — compile layer (ICO).
 - The write counterpart: the `/brain-save` skill (governed capture).
