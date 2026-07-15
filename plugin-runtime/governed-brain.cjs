@@ -41911,6 +41911,36 @@ var init_govern = __esm({
   }
 });
 
+// src/govern-message.ts
+function formatGovernMessage(s) {
+  const idle = s.ingested === 0 && s.processed === 0 && s.promoted === 0 && s.rejected === 0 && s.flagged === 0 && s.duplicates === 0 && s.quarantined === 0 && s.skipped === 0;
+  if (idle) {
+    let message2 = "Nothing to govern \u2014 spool and inbox are empty (not a failure). Capture something first with /brain-save (or brain_capture), then run brain_govern again.";
+    if (!s.indexUpdated) {
+      message2 += " Search index not refreshed \u2014 install qmd 2.x on PATH and re-run brain_govern to make new memories searchable.";
+    }
+    return message2;
+  }
+  const parts = [
+    `${s.promoted} promoted`,
+    `${s.quarantined} quarantined`,
+    `${s.rejected} rejected`,
+    `${s.duplicates} duplicate`,
+    `${s.flagged} flagged`
+  ];
+  if (s.skipped > 0) parts.push(`${s.skipped} skipped`);
+  let message = `Governed ${s.processed} inbox candidate(s) (${s.ingested} newly ingested): ${parts.join(", ")}.`;
+  if (!s.indexUpdated) {
+    message += " Search index not refreshed \u2014 install qmd 2.x on PATH and re-run brain_govern to make new memories searchable.";
+  }
+  return message;
+}
+var init_govern_message = __esm({
+  "src/govern-message.ts"() {
+    "use strict";
+  }
+});
+
 // src/local-server.ts
 var local_server_exports = {};
 __export(local_server_exports, {
@@ -41996,6 +42026,7 @@ var init_local_server = __esm({
     init_dist();
     init_config3();
     init_govern();
+    init_govern_message();
     init_anchor();
     init_write_lock();
     VERSION2 = "1.1.0";
@@ -42173,19 +42204,9 @@ var init_local_server = __esm({
           if (isMissingNativeDep(e)) return jsonResult2({ ok: false, error: "native-store-unavailable", message: NATIVE_DEP_HINT });
           throw e;
         }
-        const parts = [
-          `${s.promoted} promoted`,
-          `${s.quarantined} quarantined`,
-          `${s.rejected} rejected`,
-          `${s.duplicates} duplicate`,
-          `${s.flagged} flagged`
-        ];
-        if (s.skipped > 0) parts.push(`${s.skipped} skipped`);
-        let message = `Governed ${s.processed} inbox candidate(s) (${s.ingested} newly ingested): ${parts.join(", ")}.`;
-        if (!s.indexUpdated) {
-          message += " Search index not refreshed \u2014 install qmd 2.x on PATH and re-run brain_govern to make new memories searchable.";
-        }
-        return jsonResult2({ ok: true, ...s, message });
+        const message = formatGovernMessage(s);
+        const idle = s.ingested === 0 && s.processed === 0 && s.promoted === 0 && s.rejected === 0 && s.flagged === 0 && s.duplicates === 0 && s.quarantined === 0 && s.skipped === 0;
+        return jsonResult2({ ok: true, ...s, idle, message });
       }
     );
     server2.tool(
