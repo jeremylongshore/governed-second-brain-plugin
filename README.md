@@ -28,10 +28,12 @@ It stacks on three engines:
 |---|---|---|
 | **ICO** | [jeremylongshore/intentional-cognition-os](https://github.com/jeremylongshore/intentional-cognition-os) | **Compile** — derive knowledge from a corpus (optional; the only part that egresses) |
 | **INTKB** | [jeremylongshore/qmd-team-intent-kb](https://github.com/jeremylongshore/qmd-team-intent-kb) | **Govern** — deterministic dedupe → policy → promote + the hash-chained audit |
-| **qmd** | [tobi/qmd](https://github.com/tobi/qmd) | **Retrieve** — on-device search; every hit is a `qmd://` citation |
+| **qmd** | [tobi/qmd](https://github.com/tobi/qmd) (`@tobilu/qmd`) | **Retrieve** — on-device search; every hit is a `qmd://` citation |
 
 This plugin **bundles** the compiled INTKB packages, so it runs the govern + retrieve loop fully
 in-process — the engines stay independent repos; nothing here forks or privatizes them.
+
+**Powered by [tobi/qmd](https://github.com/tobi/qmd).** We pin `@tobilu/qmd` and ride upstream via Dependabot — we do **not** fork the search engine. For the **team** index (not personal `~/.cache/qmd`), operators on an INTKB checkout use `./scripts/bbb-qmd` and `pnpm search-canary` (see [qmd-team-intent-kb ops runbook](https://github.com/jeremylongshore/qmd-team-intent-kb/blob/main/000-docs/042-OD-OPSM-bbb-qmd-operator-runbook.md)).
 
 ## What it does
 
