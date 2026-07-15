@@ -34,6 +34,7 @@ import { validateTransition } from '@qmd-team-intent-kb/schema';
 import type { MemoryCandidate } from '@qmd-team-intent-kb/schema';
 import { resolveConfig } from './config.js';
 import { runGovern } from './govern.js';
+import { formatGovernMessage } from './govern-message.js';
 import { anchorChainHead } from './anchor.js';
 import { acquireWriteLock, WriteLockBusyError } from './write-lock.js';
 
@@ -357,19 +358,19 @@ server.tool(
       if (isMissingNativeDep(e)) return jsonResult({ ok: false, error: 'native-store-unavailable', message: NATIVE_DEP_HINT });
       throw e;
     }
-    const parts = [
-      `${s.promoted} promoted`,
-      `${s.quarantined} quarantined`,
-      `${s.rejected} rejected`,
-      `${s.duplicates} duplicate`,
-      `${s.flagged} flagged`,
-    ];
-    if (s.skipped > 0) parts.push(`${s.skipped} skipped`);
-    let message = `Governed ${s.processed} inbox candidate(s) (${s.ingested} newly ingested): ${parts.join(', ')}.`;
-    if (!s.indexUpdated) {
-      message += ' Search index not refreshed — install qmd 2.x on PATH and re-run brain_govern to make new memories searchable.';
-    }
-    return jsonResult({ ok: true, ...s, message });
+    // Empty-spool all-zeros is the healthy idle state — say so explicitly so
+    // operators do not misread "Governed 0…" as a stuck pipeline (dogfood 2026-07).
+    const message = formatGovernMessage(s);
+    const idle =
+      s.ingested === 0 &&
+      s.processed === 0 &&
+      s.promoted === 0 &&
+      s.rejected === 0 &&
+      s.flagged === 0 &&
+      s.duplicates === 0 &&
+      s.quarantined === 0 &&
+      s.skipped === 0;
+    return jsonResult({ ok: true, ...s, idle, message });
   },
 );
 

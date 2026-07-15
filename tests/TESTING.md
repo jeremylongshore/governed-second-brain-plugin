@@ -57,3 +57,26 @@ pnpm typecheck:ci       # or: pnpm typecheck (full, needs the sibling monorepo)
 pnpm test:coverage
 pnpm verify-anchors:test
 ```
+
+## One entrypoint — `pnpm test:plugin` (Governed Second Brain)
+
+Product-shaped packs over the hermetic suite. Prefer this before a dogfood push or release.
+
+| Command | What it runs |
+|---|---|
+| `pnpm test:plugin` | Unit + skill contract + local smoke + team stub smoke + mode-dispatch + onboarding assert (hits live demos page locally) |
+| `pnpm test:plugin:quick` | Hermetic only (no vitest) |
+| `pnpm test:plugin:live` | Above + `smoke/live-smoke.mjs` (team API health; set `TEAMKB_API_TOKEN` for auth/search) |
+| `pnpm onboarding:assert` | Package + demos page alone |
+| `pnpm smoke:live` | Team API only |
+
+**Pack map**
+
+| Pack | Script | Proves |
+|---|---|---|
+| A hermetic | `smoke/smoke.mjs`, `smoke-team.mjs`, `mode-dispatch`, vitest | Bundle + mode + stub team proxy |
+| B live | `smoke/live-smoke.mjs` | Real team API on tailnet (+ optional token) |
+| C onboarding | `smoke/onboarding-assert.mjs` | Manifest author object, skills, demos page prompts/commands/footer |
+| D skills | `smoke/skill-contract.test.mjs` | `/brain` + `/brain-save` frontmatter + write-never-auto |
+
+Human acceptance: [`onboarding/DOGFOOD.md`](../onboarding/DOGFOOD.md).

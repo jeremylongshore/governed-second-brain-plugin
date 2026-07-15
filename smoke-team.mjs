@@ -75,13 +75,22 @@ const client = new Client({ name: 'smoke-team', version: '0.0.0' }, { capabiliti
 await client.connect(transport);
 const text = (r) => r.content?.[0]?.text ?? JSON.stringify(r);
 
-// 3. Team surface: search + capture + transition present; local-only tools absent.
+// 3. Team surface (current product): search + status + capture + transition + inbox admin tools.
+// Local-only in-process tools (brain_govern, brain_audit_verify) must NOT appear — govern runs server-side.
 const tools = (await client.listTools()).tools.map((t) => t.name).sort();
 console.log('TOOLS:', tools.join(', '));
-for (const t of ['brain_search', 'brain_capture', 'brain_transition']) {
+for (const t of [
+  'brain_search',
+  'brain_status',
+  'brain_capture',
+  'brain_transition',
+  'brain_inbox',
+  'brain_approve',
+  'brain_reject',
+]) {
   if (!tools.includes(t)) fail(`team mode did not expose ${t}`);
 }
-for (const t of ['brain_status', 'brain_audit_verify', 'brain_govern']) {
+for (const t of ['brain_govern', 'brain_audit_verify']) {
   if (tools.includes(t)) fail(`team mode unexpectedly exposed local-only tool ${t}`);
 }
 

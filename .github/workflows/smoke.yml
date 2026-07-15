@@ -47,6 +47,16 @@ jobs:
       - name: Smoke — capture -> govern -> audit-verify -> search
         run: node smoke/smoke.mjs
 
+      # Team-mode proxy (stub API on loopback): tool surface + bearer + tenant + 403 clarity.
+      - name: Smoke — team-mode stub (search / capture / transition)
+        run: node smoke-team.mjs
+
+      # Skill frontmatter contract (/brain · /brain-save) + package/onboarding asserts.
+      - name: Smoke — skill contract + onboarding assert (package only)
+        run: |
+          node --test smoke/skill-contract.test.mjs
+          SKIP_PAGE=1 node smoke/onboarding-assert.mjs
+
       # B1 (auto-govern the remote brain_capture inbox): seed remote-shape
       # candidates directly in the throwaway `candidates` table, then drive the
       # sweep — proves promote/quarantine/duplicate/keep-in-inbox + idempotency.
