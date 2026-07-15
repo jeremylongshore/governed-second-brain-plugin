@@ -14,6 +14,8 @@ prerequisite; the GUI *Allow* dialogs can't be automated).
 
 **Full walkthrough (live):** https://demos.intentsolutions.io/bbb/
 
+That page covers: Tailscale → desktop Claude → install + `team.json` → proof `/brain` query → **optional Step 5** (teach Claude when to search the brain via a short standing order in `~/.claude/CLAUDE.md` / `AGENTS.md`). Installing the plugin connects the brain; it does **not** by itself make the agent look there first.
+
 ## Claude Code or Cowork (recommended) — one path for every OS
 
 There is **no separate Windows or Mac installer.** Plugin install and writing `team.json` both work
