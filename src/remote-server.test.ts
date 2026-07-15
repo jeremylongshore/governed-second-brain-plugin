@@ -338,13 +338,17 @@ describe('capture — idempotency + durable outbox (jfv.9)', () => {
     expect(a).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-5[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/);
   });
 
-  it('deriveCandidateId with sessionId is stable across different content (re-distill seam)', async () => {
+  it('deriveCandidateId with sessionId+index is stable on re-distill; multi-learning gets distinct slots', async () => {
     const { deriveCandidateId } = await load();
-    const a = deriveCandidateId('t', 'Title A', 'first distillation', 'sess-1');
-    const b = deriveCandidateId('t', 'Title B', 're-distilled wording entirely different', 'sess-1');
-    const c = deriveCandidateId('t', 'Title A', 'first distillation', 'sess-2');
+    // Same session + same learning index + different content → same id (re-distill).
+    const a = deriveCandidateId('t', 'Title A', 'first distillation', 'sess-1', 0);
+    const b = deriveCandidateId('t', 'Title B', 're-distilled wording entirely different', 'sess-1', 0);
+    // Different learning index → different id (multi-learning SessionEnd).
+    const c = deriveCandidateId('t', 'Title C', 'second learning', 'sess-1', 1);
+    const d = deriveCandidateId('t', 'Title A', 'first distillation', 'sess-2', 0);
     expect(a).toBe(b);
     expect(a).not.toBe(c);
+    expect(a).not.toBe(d);
   });
 
   it('capture derives the SAME candidateId for the same proposal (no duplicate rows on retry)', async () => {
@@ -358,7 +362,7 @@ describe('capture — idempotency + durable outbox (jfv.9)', () => {
     expect(one['candidateId']).toBe(two['candidateId']);
   });
 
-  it('capture with sessionId keeps the same id when distillation text changes', async () => {
+  it('capture with sessionId+index keeps the same id when distillation text changes', async () => {
     const { capture } = await load({ TEAMKB_API_URL: 'http://brain:3847', TEAMKB_TENANT_ID: 't1' });
     const bodies = [];
     vi.stubGlobal(
@@ -368,11 +372,15 @@ describe('capture — idempotency + durable outbox (jfv.9)', () => {
         return new Response(JSON.stringify({ intake: 'created' }), { status: 201 });
       }),
     );
-    const one = payload(await capture('T1', 'first distill', undefined, undefined, 'session-xyz'));
+    const one = payload(await capture('T1', 'first distill', undefined, undefined, 'session-xyz', 0));
     const two = payload(
-      await capture('T2', 'second distill different bytes', undefined, undefined, 'session-xyz'),
+      await capture('T2', 'second distill different bytes', undefined, undefined, 'session-xyz', 0),
+    );
+    const three = payload(
+      await capture('T3', 'another learning', undefined, undefined, 'session-xyz', 1),
     );
     expect(one['candidateId']).toBe(two['candidateId']);
+    expect(one['candidateId']).not.toBe(three['candidateId']);
     expect(bodies[0].id).toBe(bodies[1].id);
     expect(bodies[0].content).not.toBe(bodies[1].content);
   });

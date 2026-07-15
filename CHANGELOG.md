@@ -10,13 +10,17 @@ installable Claude Code + Cowork plugin (a local stdio MCP server); the engines 
 
 ### Fixed
 
+- **SessionEnd multi-learning slots + hook wiring.** `deriveCandidateId` now takes
+  `learningIndex` (0..4): key = `(tenant, sessionId, session-end, index)` so up to 5 learnings
+  per session stay distinct while re-distill of the same index collapses. Autocapture hook
+  resolves `session_id` / `sessionId` / transcript-path fallback and **requires**
+  `brain_capture({ sessionId, learningIndex })` in the distiller prompt. Client no longer
+  invents `already_exists` from bare HTTP 200 without `intake`. Skill docs corrected (inbox
+  does dedupe at intake).
 - **Session-stable capture idempotency + frozen outbox contract (Property 1/2 seam).**
-  `deriveCandidateId` uses `(tenant, sessionId, "session-end")` when `sessionId` is provided so
-  re-distilled SessionEnd retries cannot mint a new id; without `sessionId` keeps content-hash
-  UUIDv5 for manual `/brain-save`. Outbox documents and tests that drain POSTs frozen file bytes
-  only (never rebuilds). `brain_capture` accepts optional `sessionId` and surfaces
-  `intake` / `alreadyExists` when the server reports created vs collapsed. Addresses the
-  Dev.to review on fire-and-forget writer safety.
+  `deriveCandidateId` uses session keys when `sessionId` is provided; without `sessionId` keeps
+  content-hash UUIDv5 for manual `/brain-save`. Outbox freezes final POST body; drain replays
+  file bytes only. Surfaces `intake` / `alreadyExists` from the server.
 
 ### Fixed
 

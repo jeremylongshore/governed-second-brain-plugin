@@ -109,13 +109,30 @@ try {
   raw = '';
 }
 let transcriptPath = '';
+/** Stable session key for capture idempotency (session + learningIndex slots). */
+let sessionId = '';
 try {
   const payload = raw.trim().length > 0 ? JSON.parse(raw) : {};
   transcriptPath = typeof payload.transcript_path === 'string' ? payload.transcript_path : '';
+  // Claude Code hook payloads may expose session_id / sessionId; fall back to a
+  // stable hash of the transcript path so re-fires of the same session collapse.
+  const rawSid =
+    (typeof payload.session_id === 'string' && payload.session_id) ||
+    (typeof payload.sessionId === 'string' && payload.sessionId) ||
+    '';
+  sessionId = rawSid.trim();
+  if (!sessionId && transcriptPath) {
+    // Deterministic fallback from path (not crypto — keep hook deps zero).
+    let h = 0;
+    for (let i = 0; i < transcriptPath.length; i++) h = (Math.imul(31, h) + transcriptPath.charCodeAt(i)) | 0;
+    sessionId = `transcript:${(h >>> 0).toString(16)}:${transcriptPath.replace(/[^a-zA-Z0-9._-]/g, '_').slice(-48)}`;
+  }
 } catch {
   transcriptPath = '';
+  sessionId = '';
 }
 if (!transcriptPath || !existsSync(transcriptPath)) noop('no readable transcript_path in the hook payload');
+if (!sessionId) noop('no session id resolvable from hook payload');
 
 // ── The runtime bundle (this file lives in <plugin>/hooks/). ──
 const RUNTIME = join(new URL('..', import.meta.url).pathname, 'plugin-runtime', 'governed-brain.cjs');
@@ -125,21 +142,26 @@ if (!existsSync(RUNTIME)) noop(`plugin runtime not found at ${RUNTIME}`);
 // It runs headless with the team-mode brain MCP (member token), so it can ONLY
 // brain_capture (propose) — it cannot promote or write durable state. Every proposal
 // is governed + agent-reviewed server-side before anything is remembered.
+//
+// Idempotency: ALWAYS pass sessionId + learningIndex (0..4). The plugin mints a
+// per-slot id so re-distill of slot i collapses, while slots 0..N stay distinct.
 const PROMPT = [
   'You are the auto-capture distiller for a teammate\'s just-finished Claude Code session.',
   `Read the session transcript at: ${transcriptPath}`,
+  `Session id (REQUIRED on every brain_capture): ${sessionId}`,
   'Extract AT MOST 5 DURABLE, transferable learnings — decisions made, patterns that emerged,',
   'gotchas worth not relearning, conventions adopted — each self-contained so a teammate finds it',
   'useful in 30 days with zero memory of today. Weight real conclusions over chatter.',
   'HARD RULES: NEVER capture a secret, token, credential, connection string, or PII. Skip ephemeral',
   'debugging noise, status updates, half-baked ideas, and anything already in a CLAUDE.md/README.',
   'A small honest set beats a padded one — capturing NOTHING is a correct, common outcome.',
-  'For each durable learning, call brain_capture { title, content, category } (category one of:',
-  'decision, pattern, convention, architecture, troubleshooting, onboarding, reference). These are',
-  'PROPOSALS to the team inbox — the deterministic pipeline + an agent reviewer decide what is kept.',
+  'For each durable learning i (0-based, max 4), call brain_capture with ALL of:',
+  `{ title, content, category, sessionId: "${sessionId}", learningIndex: i }`,
+  'category one of: decision, pattern, convention, architecture, troubleshooting, onboarding, reference.',
+  'NEVER omit sessionId or learningIndex. Re-distill of the same i must use the same learningIndex.',
+  'These are PROPOSALS to the team inbox — the pipeline + an agent reviewer decide what is kept.',
   'Do not call any other tool. When done, print a one-line summary: "autocapture: proposed N".',
 ].join(' ');
-
 // A minimal, team-mode MCP config passed explicitly (the plugin is not assumed to be
 // enabled in the headless child). Env-expanded from the current team credentials.
 const mcpConfig = JSON.stringify({

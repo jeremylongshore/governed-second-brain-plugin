@@ -121,18 +121,25 @@ function uuidv5(name: string, namespace: string): string {
 
 /**
  * Deterministic candidate id.
- * - With sessionId: stable before content (session-end / unattended path).
- * - Without: content-derived (manual captures; backward compatible).
+ * - With sessionId: stable before content. Include learningIndex (0..N) so a
+ *   multi-learning SessionEnd can mint up to N distinct slots; re-distill of the
+ *   *same* slot collapses. Without learningIndex, defaults to 0 (single-slot).
+ * - Without sessionId: content-derived (manual /brain-save; backward compatible).
  */
 export function deriveCandidateId(
   tenant: string,
   title: string,
   content: string,
   sessionId?: string,
+  learningIndex?: number,
 ): string {
   const sid = sessionId?.trim();
   if (sid !== undefined && sid !== '') {
-    return uuidv5(`${tenant}\n${sid}\nsession-end`, CANDIDATE_ID_NAMESPACE);
+    const idx =
+      typeof learningIndex === 'number' && Number.isInteger(learningIndex) && learningIndex >= 0
+        ? learningIndex
+        : 0;
+    return uuidv5(`${tenant}\n${sid}\nsession-end\n${idx}`, CANDIDATE_ID_NAMESPACE);
   }
   return uuidv5(`${tenant}\n${title}\n${content}`, CANDIDATE_ID_NAMESPACE);
 }
@@ -382,6 +389,7 @@ export async function capture(
   category: string | undefined,
   filePaths: string[] | undefined,
   sessionId?: string,
+  learningIndex?: number,
 ): Promise<ReturnType<typeof jsonResult>> {
   if (API_URL === undefined || API_URL === '') {
     return jsonResult({ ok: false, error: 'unconfigured — set TEAMKB_API_URL to your team brain' });
@@ -389,7 +397,7 @@ export async function capture(
   // Build the FULL MemoryCandidate client-side once. This object (serialized) is
   // what gets POSTed and, on failure, FROZEN in the outbox — drain never rebuilds it.
   const candidate = {
-    id: deriveCandidateId(TENANT_ID, title, content, sessionId),
+    id: deriveCandidateId(TENANT_ID, title, content, sessionId, learningIndex),
     status: 'inbox',
     source: 'mcp',
     content,
@@ -402,6 +410,9 @@ export async function capture(
       filePaths: filePaths ?? [],
       tags: [] as string[],
       ...(sessionId?.trim() ? { sessionId: sessionId.trim() } : {}),
+      ...(typeof learningIndex === 'number' && Number.isInteger(learningIndex)
+        ? { learningIndex }
+        : {}),
     },
     prePolicyFlags: { potentialSecret: false, lowConfidence: false, duplicateSuspect: false },
     capturedAt: new Date().toISOString(),
@@ -459,23 +470,33 @@ export async function capture(
     intake = undefined;
   }
   const drained = await drainOutbox();
-  const already = intake === 'already_exists' || res.status === 200;
+  // Prefer body.intake for knowledge; do not invent already_exists from bare 200
+  // (old servers / proxies may return 200 without meaning collapse).
+  const known =
+    intake === 'created' || intake === 'already_exists'
+      ? intake
+      : res.status === 201
+        ? 'created'
+        : 'unknown';
+  const already = known === 'already_exists';
   return jsonResult({
     ok: true,
     candidateId: candidate.id,
     tenantId: TENANT_ID,
-    intake: intake ?? (already ? 'already_exists' : 'created'),
+    intake: known,
     alreadyExists: already,
     ...(drained > 0 ? { outboxDrained: drained } : {}),
     message: already
-      ? 'Idempotent: this proposal already exists in the team brain inbox (same session id or same content). Safe to retry; not a new capture.'
-      : 'Proposed to the team brain inbox. This is a PROPOSAL — the deterministic govern pipeline decides if/when it is promoted (an admin governs, or auto-govern once enabled). It is not durable memory yet.',
+      ? 'Idempotent: this proposal already exists in the team brain inbox (same session slot or same content). Safe to retry; not a new capture.'
+      : known === 'unknown'
+        ? 'Proposed to the team brain inbox (server did not report created vs already_exists). This is a PROPOSAL — not durable memory until promoted.'
+        : 'Proposed to the team brain inbox. This is a PROPOSAL — the deterministic govern pipeline decides if/when it is promoted (an admin governs, or auto-govern once enabled). It is not durable memory yet.',
   });
 }
 
 server.tool(
   'brain_capture',
-  "Propose a fact, decision, pattern, or convention to your team's governed brain — a PROPOSAL, not a promotion. Member-allowed: the server queues it as a candidate and the deterministic govern pipeline disposes; it is not durable memory until promoted. Proxies to the brain over the tailnet (team mode). Pass sessionId for unattended/SessionEnd captures so retries collapse even if distillation text changes.",
+  "Propose a fact, decision, pattern, or convention to your team's governed brain — a PROPOSAL, not a promotion. Member-allowed: the server queues it as a candidate and the deterministic govern pipeline disposes; it is not durable memory until promoted. Proxies to the brain over the tailnet (team mode). For SessionEnd: pass sessionId + learningIndex (0..4) so each learning is its own slot and re-distill of that slot collapses.",
   {
     title: z.string().min(1).describe('Short, specific title for the memory'),
     content: z.string().min(1).describe('The fact to remember, in full'),
@@ -485,11 +506,27 @@ server.tool(
       .string()
       .optional()
       .describe(
-        'Stable session id (e.g. Claude Code session). When set, candidate id is derived from tenant+session so re-distilled retries do not create duplicates.',
+        'Stable session id (Claude Code session). With learningIndex, forms a per-learning slot so re-distill does not duplicate and multi-learning sessions keep separate rows.',
+      ),
+    learningIndex: z
+      .number()
+      .int()
+      .min(0)
+      .max(4)
+      .optional()
+      .describe(
+        '0-based index of this learning within the session (SessionEnd: 0..4 for up to 5 learnings). Defaults to 0 when sessionId is set.',
       ),
   },
   async (params) =>
-    capture(params.title, params.content, params.category, params.filePaths, params.sessionId),
+    capture(
+      params.title,
+      params.content,
+      params.category,
+      params.filePaths,
+      params.sessionId,
+      params.learningIndex,
+    ),
 );
 
 server.tool(

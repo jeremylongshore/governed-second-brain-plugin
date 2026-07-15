@@ -66,10 +66,12 @@ genuinely-new delta:
    debugging steps, throwaway preferences, secrets, or anything already in a CLAUDE.md/README.
 2. Pick a category: `decision`, `pattern`, `convention`, `architecture`, `troubleshooting`,
    `onboarding`, or `reference`.
-3. Call **`brain_capture`** with `{ title, content, category, filePaths?, sessionId? }`.
-   In **team mode**, pass `sessionId` (Claude Code session id) for unattended/SessionEnd-style
-   captures so retries collapse even if distillation text changes; omit it for one-off manual facts
-   (id falls back to content). Local mode still spool-captures as before.
+3. Call **`brain_capture`** with `{ title, content, category, filePaths?, sessionId?, learningIndex? }`.
+   In **team mode**, SessionEnd/autocapture **must** pass `sessionId` + `learningIndex` (0..4) so each
+   learning is its own idempotency slot (re-distill of slot i collapses; slots stay distinct). For
+   one-off manual facts, omit both (id falls back to content). The team inbox **does** dedupe at
+   intake (id-first, then content-hash) — pre-save search still reduces noise. Local mode still
+   spool-captures as before.
 4. Call **`brain_govern`** to drain the spool through the deterministic pipeline (dedupe →
    policy/secret-detection → promotion). It returns what was promoted, rejected, flagged, and
    deduplicated, and writes the hash-chained audit event for each decision.
