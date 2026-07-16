@@ -67,6 +67,7 @@ function acquireInstallLock() {
         }
       } catch (statError) {
         if (statError?.code !== 'ENOENT') throw statError;
+        continue;
       }
       if (Date.now() - started > WAIT_LIMIT_MS) {
         throw new Error('timed out waiting for another governed-brain native dependency install');

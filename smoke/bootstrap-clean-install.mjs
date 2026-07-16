@@ -36,6 +36,7 @@ const parse = (result) => JSON.parse(result.content[0].text);
 function openMcp(command, args, env) {
   const processHandle = spawn(command, args, { env, stdio: ['pipe', 'pipe', 'inherit'] });
   const pending = new Map();
+  const protocolErrors = [];
   let buffer = '';
   let sequence = 0;
 
@@ -47,7 +48,15 @@ function openMcp(command, args, env) {
       const line = buffer.slice(0, newline).trim();
       buffer = buffer.slice(newline + 1);
       if (!line) continue;
-      const message = JSON.parse(line);
+      let message;
+      try {
+        message = JSON.parse(line);
+      } catch {
+        // Keep the smoke alive long enough to report a deterministic protocol
+        // failure. MCP stdio stdout must contain JSON-RPC only.
+        protocolErrors.push('non-JSON stdout');
+        continue;
+      }
       if (message.id === undefined || !pending.has(message.id)) continue;
       const { resolve, reject, timer } = pending.get(message.id);
       pending.delete(message.id);
@@ -71,7 +80,7 @@ function openMcp(command, args, env) {
   const notify = (method, params = {}) => {
     processHandle.stdin.write(`${JSON.stringify({ jsonrpc: '2.0', method, params })}\n`);
   };
-  return { processHandle, request, notify };
+  return { processHandle, protocolErrors, request, notify };
 }
 
 try {
@@ -94,6 +103,7 @@ try {
   teamMcp.notify('notifications/initialized');
   const teamTools = (await teamMcp.request('tools/list')).tools.map((tool) => tool.name);
   ok(teamTools.includes('brain_search'), `clean-install team mode registered ${teamTools.length} tool(s)`);
+  ok(teamMcp.protocolErrors.length === 0, 'team mode emitted JSON-RPC only on stdout');
   ok(!existsSync(join(RUNTIME, 'node_modules')), 'team mode started without provisioning local native dependencies');
   child.stdin.end();
   await once(child, 'exit');
@@ -117,6 +127,7 @@ try {
 
   const tools = (await mcp.request('tools/list')).tools.map((tool) => tool.name).sort();
   ok(tools.length === 6, `clean-install bootstrap registered 6 local tools: ${tools.join(', ')}`);
+  ok(mcp.protocolErrors.length === 0, 'local mode emitted JSON-RPC only on stdout');
   ok(
     existsSync(join(RUNTIME, 'node_modules', 'better-sqlite3')) &&
       existsSync(join(RUNTIME, 'node_modules', 'fs-ext')),
@@ -144,7 +155,7 @@ try {
   const audit = parse(await mcp.request('tools/call', { name: 'brain_audit_verify', arguments: {} }));
   ok(audit.ok === true && audit.totalEvents >= 1, `brain_audit_verify validated ${audit.totalEvents ?? 0} event(s)`);
 } finally {
-  if (child && child.exitCode === null) {
+  if (child && child.exitCode === null && child.signalCode === null) {
     child.stdin.end();
     await Promise.race([
       once(child, 'exit'),
