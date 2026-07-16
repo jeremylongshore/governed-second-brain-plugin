@@ -1,5 +1,16 @@
 # Changelog
 
+## [1.1.2] - 2026-07-16
+
+### Fixed
+
+- **Local mode now starts from a clean Claude/Codex marketplace install.** The MCP manifest runs a
+  dependency-free bootstrap that provisions the exact lockfile-pinned `better-sqlite3` and `fs-ext`
+  native modules on first local start. Team mode still starts with zero installation and never loads
+  the local store. Concurrent starts serialize the one-time install and stale locks fail safely.
+- Added a clean-copy regression smoke that begins without `node_modules`, starts the shipped MCP
+  artifact, and proves disposable capture → govern → status → audit verification plus cleanup.
+
 All notable changes to the **Governed Second Brain** plugin are documented here. This is the
 installable Claude Code + Cowork plugin (a local stdio MCP server); the engines it bundles
 (`ico` / `qmd` / govern kernel) carry their own changelogs in their repos. Format based on

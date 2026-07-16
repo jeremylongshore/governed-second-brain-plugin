@@ -4,7 +4,7 @@
   The governed team brain — cited recall, hash-chained receipts. A local-first Claude Code + Cowork
   plugin: turn <em>your own</em> files into a governed, <code>qmd://</code>-cited brain with a
   tamper-evident, SHA-256 hash-chained audit trail.<br>
-  <strong>Compile, then govern.</strong> One plugin, two modes: <strong>local</strong> (default — in-process, no daemon, no network, no API key for retrieval) or <strong>team</strong> (proxy to a shared governed brain over your network).
+  <strong>Compile, then govern.</strong> One plugin, two modes: <strong>local</strong> (default — in-process, no daemon, no runtime network after first-start provisioning, no API key for retrieval) or <strong>team</strong> (proxy to a shared governed brain over your network).
 </p>
 
 <p align="center">
@@ -103,6 +103,11 @@ history-rewrite failure. Run the verifier's own tests with `npm run verify-ancho
 
 ## Install
 
+Local-mode marketplace installs provision two lockfile-pinned native modules (`better-sqlite3` and
+`fs-ext`) inside the plugin on first start. That one-time step uses npm; after it completes, local
+capture, governance, audit, and retrieval run in-process without a service daemon. Team mode does not
+load or install those local-store modules.
+
 One command, two modes:
 
 ```bash
@@ -164,10 +169,11 @@ macOS + Claude Code has a one-click installer that does steps 2–3 for you, and
 per-platform walkthrough (incl. the **Claude Desktop** `mcpServers` config) in
 [`onboarding/`](onboarding/README.md).
 
-In team mode the tool surface is **`brain_search`** (read) + **`brain_capture`** (propose) +
-**`brain_transition`** (admin-only) — govern runs server-side, so there's no client `brain_govern`:
-**the model proposes, the server disposes**, and each promotion gets a hash-chained receipt. A member
-token can read + propose; admin actions (transition) return a clear 403 otherwise.
+In team mode the tool surface is **`brain_search`** + **`brain_status`** (read),
+**`brain_capture`** (propose), and **`brain_inbox`** / **`brain_approve`** / **`brain_reject`** /
+**`brain_transition`** (admin review and lifecycle). Govern runs server-side, so there's no client
+`brain_govern`: **the model proposes, the server disposes**, and each promotion gets a hash-chained
+receipt. A member token can read + propose; admin actions return a clear 403 otherwise.
 
 > Team mode is **dependency-free** — it uses only `fetch` + the MCP SDK, never the native store — so it
 > runs straight from a marketplace clone with zero build.

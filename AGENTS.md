@@ -36,9 +36,10 @@ now ONE plugin for both local and team — do not resurrect a second one.
   `brain_search` / `brain_status` / `brain_audit_verify` (read) + `brain_capture` / `brain_govern` /
   `brain_transition` (write).
 - **`src/remote-server.ts`** — TEAM mode. Proxies to the INTKB HTTP API (`apps/api`) over the network
-  with a per-user bearer token. Tool surface (3): `brain_search` (read), `brain_capture`
-  (propose → `POST /api/candidates`), `brain_transition` (admin → `POST /api/memories/:id/transition`).
-  **No `brain_govern`** (govern runs server-side); `brain_status` / `brain_audit_verify` are local-only.
+  with a per-user bearer token. Tool surface (7): `brain_search` and auth-free `brain_status` reads;
+  `brain_capture` proposals; `brain_inbox`, `brain_approve`, and `brain_reject` admin review; and
+  `brain_transition` admin lifecycle changes. **No `brain_govern`** (govern runs server-side), and
+  `brain_audit_verify` remains local-only.
 
 ### ⚠️ CRITICAL constraint — team mode is dependency-free
 

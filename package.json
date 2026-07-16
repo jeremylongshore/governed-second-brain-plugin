@@ -1,7 +1,7 @@
 {
   "name": "governed-second-brain",
-  "version": "1.1.1",
-  "description": "Governed second brain \u2014 a Claude Code + Cowork plugin + installer. ONE plugin, two modes: local (default) turns your own files into cited (qmd://) memory with deterministic governance and a tamper-evident hash-chained audit trail, in-process with no network; team (set TEAMKB_API_URL) queries your team's single governed brain over the tailnet.",
+  "version": "1.1.2",
+  "description": "Governed second brain \u2014 a Claude Code + Cowork plugin + installer. ONE plugin, two modes: local (default) turns your files into cited memory with deterministic governance and a tamper-evident audit trail after one-time native dependency provisioning; team proxies to your shared brain.",
   "keywords": [
     "mcp",
     "claude-code",
@@ -27,7 +27,7 @@
   "files": [
     "bin",
     "onboarding",
-    "plugin-runtime/governed-brain.cjs",
+    "plugin-runtime",
     ".claude-plugin",
     "skills",
     ".mcp.json",
@@ -51,7 +51,8 @@
     "anchor-on-transition:test": "node --test scripts/anchor-on-transition.test.mjs",
     "audit-verify-banner:test": "node --test smoke/audit-verify-banner.test.mjs",
     "mode-dispatch:test": "node --test smoke/mode-dispatch.test.mjs",
-    "anchor-conformance:test": "node --test scripts/anchor-conformance.test.mjs"
+    "anchor-conformance:test": "node --test scripts/anchor-conformance.test.mjs",
+    "bootstrap-clean-install:test": "node smoke/bootstrap-clean-install.mjs"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.29.0",

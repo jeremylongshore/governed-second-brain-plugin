@@ -40,6 +40,12 @@ jobs:
           node -e "const p=require('./package.json'); delete p.devDependencies; require('fs').writeFileSync('package.json', JSON.stringify(p,null,2))"
           npm install --no-audit --no-fund
 
+      # Reproduce the actual marketplace failure: a copied plugin-runtime has no
+      # parent node_modules and no install hook. The bootstrap must provision the
+      # lockfile-pinned native modules, then complete capture -> govern -> audit.
+      - name: Smoke — clean marketplace install bootstrap
+        run: npm run bootstrap-clean-install:test
+
       - name: Install pinned qmd (best-effort — enables the search assertion)
         continue-on-error: true
         run: npm install -g @tobilu/qmd@2.5.3
