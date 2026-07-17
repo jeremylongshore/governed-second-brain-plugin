@@ -36898,9 +36898,53 @@ var init_path_safety = __esm({
 });
 
 // ../qmd-team-intent-kb/packages/common/dist/freshness.js
+function computeFreshnessScore(updatedAt, nowIso, halfLifeDays = 90) {
+  const updatedMs = new Date(updatedAt).getTime();
+  const nowMs = new Date(nowIso).getTime();
+  const ageDays = Math.max(0, (nowMs - updatedMs) / (1e3 * 60 * 60 * 24));
+  const lambda = Math.LN2 / halfLifeDays;
+  return Math.exp(-lambda * ageDays);
+}
+function rerankSearchHits(hits, nowIso, halfLifeDays = 90) {
+  return hits.map((hit) => {
+    const freshness = computeFreshnessScore(hit.updatedAt, nowIso, halfLifeDays);
+    const categoryBoost = CATEGORY_BOOST[hit.category] ?? 1;
+    const finalScore = Math.round(hit.score * freshness * categoryBoost * 1e3) / 1e3;
+    return { ...hit, finalScore };
+  }).sort((a, b) => b.finalScore - a.finalScore);
+}
+function extractMemoryIdFromCitation(citation) {
+  const lastSlash = citation.lastIndexOf("/");
+  const base = lastSlash === -1 ? citation : citation.slice(lastSlash + 1);
+  const stripped = base.replace(/\.[^.]+$/, "");
+  return stripped.length > 0 ? stripped : null;
+}
+function rerankCitedHits(hits, resolveMetadata, nowIso, halfLifeDays = 90) {
+  const enriched = hits.map((h) => {
+    const id = extractMemoryIdFromCitation(h.file);
+    const meta = id === null ? null : resolveMetadata(id);
+    return {
+      ...h,
+      memoryId: meta === null ? null : id,
+      category: meta?.category ?? "",
+      updatedAt: meta?.updatedAt ?? nowIso
+    };
+  });
+  return rerankSearchHits(enriched, nowIso, halfLifeDays);
+}
+var CATEGORY_BOOST;
 var init_freshness = __esm({
   "../qmd-team-intent-kb/packages/common/dist/freshness.js"() {
     "use strict";
+    CATEGORY_BOOST = {
+      decision: 1.2,
+      architecture: 1.15,
+      convention: 1.1,
+      pattern: 1.1,
+      troubleshooting: 1,
+      onboarding: 0.95,
+      reference: 0.9
+    };
   }
 });
 
@@ -39131,6 +39175,21 @@ var init_result_parser = __esm({
 });
 
 // ../qmd-team-intent-kb/packages/qmd-adapter/dist/search/search-client.js
+function resolveScopeCollections(scope) {
+  switch (scope) {
+    case "curated":
+      return getDefaultSearchCollections();
+    case "inbox":
+      return ["kb-inbox"];
+    case "archived":
+      return ["kb-archive"];
+    case "all":
+      return [];
+    // No filtering
+    default:
+      return getDefaultSearchCollections();
+  }
+}
 var SearchClient;
 var init_search_client = __esm({
   "../qmd-team-intent-kb/packages/qmd-adapter/dist/search/search-client.js"() {
@@ -39164,19 +39223,7 @@ var init_search_client = __esm({
       }
       /** Resolve which collections to include based on scope */
       resolveCollections(scope) {
-        switch (scope) {
-          case "curated":
-            return getDefaultSearchCollections();
-          case "inbox":
-            return ["kb-inbox"];
-          case "archived":
-            return ["kb-archive"];
-          case "all":
-            return [];
-          // No filtering
-          default:
-            return getDefaultSearchCollections();
-        }
+        return resolveScopeCollections(scope);
       }
     };
   }
@@ -39214,28 +39261,295 @@ var init_health_check = __esm({
   }
 });
 
-// ../qmd-team-intent-kb/packages/qmd-adapter/dist/adapter.js
-var import_node_fs5, import_node_path7, QmdAdapter;
-var init_adapter = __esm({
-  "../qmd-team-intent-kb/packages/qmd-adapter/dist/adapter.js"() {
+// ../qmd-team-intent-kb/packages/qmd-adapter/dist/search/rrf-fusion.js
+function fuseReciprocalRank(qmdHits, nativeHits, k = RRF_K) {
+  const entries = /* @__PURE__ */ new Map();
+  qmdHits.forEach((hit, i) => {
+    const rank = i + 1;
+    const entry = entries.get(hit.file) ?? { id: hit.file, score: 0, bestRank: Infinity };
+    entry.score += 1 / (k + rank);
+    entry.bestRank = Math.min(entry.bestRank, rank);
+    entry.qmdHit ??= hit;
+    entries.set(hit.file, entry);
+  });
+  nativeHits.forEach((hit, i) => {
+    const rank = i + 1;
+    const entry = entries.get(hit.id) ?? { id: hit.id, score: 0, bestRank: Infinity };
+    entry.score += 1 / (k + rank);
+    entry.bestRank = Math.min(entry.bestRank, rank);
+    entry.nativeHit ??= hit;
+    entries.set(hit.id, entry);
+  });
+  return [...entries.values()].sort((a, b) => b.score - a.score || a.bestRank - b.bestRank || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0)).map((entry) => ({
+    file: entry.id,
+    score: entry.score,
+    snippet: entry.qmdHit?.snippet !== void 0 && entry.qmdHit.snippet !== "" ? entry.qmdHit.snippet : entry.nativeHit?.snippet ?? "",
+    collection: entry.qmdHit?.collection ?? entry.nativeHit?.collection ?? "unknown"
+  }));
+}
+var RRF_K;
+var init_rrf_fusion = __esm({
+  "../qmd-team-intent-kb/packages/qmd-adapter/dist/search/rrf-fusion.js"() {
+    "use strict";
+    RRF_K = 60;
+  }
+});
+
+// ../qmd-team-intent-kb/packages/qmd-adapter/dist/native/fts5-backend.js
+function buildFts5MatchQuery(query) {
+  const tokens = query.match(/[\p{L}\p{N}]+/gu) ?? [];
+  return tokens.map((t) => `"${t}"`).join(" ");
+}
+var import_better_sqlite32, Fts5Backend;
+var init_fts5_backend = __esm({
+  "../qmd-team-intent-kb/packages/qmd-adapter/dist/native/fts5-backend.js"() {
+    "use strict";
+    import_better_sqlite32 = __toESM(require("better-sqlite3"), 1);
+    Fts5Backend = class {
+      db;
+      insertStmt;
+      deleteStmt;
+      searchStmt;
+      countStmt;
+      constructor(opts = {}) {
+        this.db = opts.db ?? new import_better_sqlite32.default(opts.path ?? ":memory:");
+        this.db.pragma("journal_mode = WAL");
+        this.db.pragma("busy_timeout = 5000");
+        this.db.exec("CREATE VIRTUAL TABLE IF NOT EXISTS docs USING fts5(id UNINDEXED, collection UNINDEXED, content)");
+        this.insertStmt = this.db.prepare("INSERT INTO docs(id, collection, content) VALUES (?, ?, ?)");
+        this.deleteStmt = this.db.prepare("DELETE FROM docs WHERE id = ?");
+        this.searchStmt = this.db.prepare("SELECT id, collection, snippet(docs, 2, '', '', '\u2026', 16) AS snippet, bm25(docs) AS rank FROM docs WHERE docs MATCH ? ORDER BY rank LIMIT ?");
+        this.countStmt = this.db.prepare("SELECT count(*) AS n FROM docs");
+      }
+      /** Index documents (upsert by id — a re-indexed doc replaces its prior copy). */
+      index(docs) {
+        const tx = this.db.transaction((items) => {
+          for (const doc of items) {
+            this.deleteStmt.run(doc.id);
+            this.insertStmt.run(doc.id, doc.collection ?? "", doc.content);
+          }
+        });
+        tx(docs);
+      }
+      /**
+       * Insert documents KNOWN to be absent from the index — skips the per-doc
+       * delete. `id` is UNINDEXED in the FTS5 table, so each upsert delete is a
+       * full scan of the virtual table; on a bulk first build that turns 17k
+       * inserts into O(n²) minutes. Callers that track index membership (the
+       * NativeIndexManager's files table) use this for new docs and reserve
+       * `index()`/`remove()` for the few changed/deleted ones.
+       */
+      insert(docs) {
+        const tx = this.db.transaction((items) => {
+          for (const doc of items) {
+            this.insertStmt.run(doc.id, doc.collection ?? "", doc.content);
+          }
+        });
+        tx(docs);
+      }
+      /** Remove documents by id (no-op for ids that are not indexed). */
+      remove(ids) {
+        const tx = this.db.transaction((items) => {
+          for (const id of items)
+            this.deleteStmt.run(id);
+        });
+        tx(ids);
+      }
+      /** Remove every indexed document. */
+      clear() {
+        this.db.exec("DELETE FROM docs");
+      }
+      /** BM25 keyword search → top-k hits, most relevant first. */
+      search(query, k = 10) {
+        const match = buildFts5MatchQuery(query);
+        if (match.length === 0)
+          return [];
+        const rows = this.searchStmt.all(match, k);
+        return rows.map((r) => ({
+          id: r.id,
+          collection: r.collection,
+          snippet: r.snippet,
+          score: -r.rank
+          // FTS5 bm25() is negative (best = most negative); negate so higher = better
+        }));
+      }
+      count() {
+        return this.countStmt.get().n;
+      }
+      close() {
+        this.db.close();
+      }
+    };
+  }
+});
+
+// ../qmd-team-intent-kb/packages/qmd-adapter/dist/native/native-index-manager.js
+function getNativeIndexManager(opts) {
+  if (opts.indexPath === ":memory:")
+    return new NativeIndexManager(opts);
+  const cached = managerCache.get(opts.indexPath);
+  if (cached !== void 0)
+    return cached;
+  const manager = new NativeIndexManager(opts);
+  managerCache.set(opts.indexPath, manager);
+  return manager;
+}
+var import_node_fs5, import_node_path7, import_better_sqlite33, NativeIndexManager, managerCache;
+var init_native_index_manager = __esm({
+  "../qmd-team-intent-kb/packages/qmd-adapter/dist/native/native-index-manager.js"() {
     "use strict";
     import_node_fs5 = require("node:fs");
     import_node_path7 = require("node:path");
+    import_better_sqlite33 = __toESM(require("better-sqlite3"), 1);
+    init_collection_registry();
+    init_fts5_backend();
+    NativeIndexManager = class {
+      backend;
+      db;
+      exportDir;
+      refreshTtlMs;
+      lastRefreshMs = 0;
+      selectFiles;
+      upsertFile;
+      deleteFile;
+      constructor(opts) {
+        this.exportDir = opts.exportDir;
+        this.refreshTtlMs = opts.refreshTtlMs ?? 15e3;
+        if (opts.indexPath !== ":memory:") {
+          (0, import_node_fs5.mkdirSync)((0, import_node_path7.dirname)(opts.indexPath), { recursive: true });
+        }
+        this.db = new import_better_sqlite33.default(opts.indexPath);
+        this.backend = new Fts5Backend({ db: this.db });
+        this.db.exec("CREATE TABLE IF NOT EXISTS files (path TEXT PRIMARY KEY, doc_id TEXT NOT NULL, mtime_ms REAL NOT NULL)");
+        this.selectFiles = this.db.prepare("SELECT path, doc_id, mtime_ms FROM files");
+        this.upsertFile = this.db.prepare("INSERT INTO files(path, doc_id, mtime_ms) VALUES (?, ?, ?) ON CONFLICT(path) DO UPDATE SET doc_id = excluded.doc_id, mtime_ms = excluded.mtime_ms");
+        this.deleteFile = this.db.prepare("DELETE FROM files WHERE path = ?");
+      }
+      /**
+       * Bring the index up to date with the export tree if the TTL has elapsed.
+       * Returns the number of files (re)indexed — 0 on a no-op sweep.
+       */
+      ensureFresh(nowMs = Date.now()) {
+        if (nowMs - this.lastRefreshMs < this.refreshTtlMs)
+          return 0;
+        this.lastRefreshMs = nowMs;
+        const onDisk = /* @__PURE__ */ new Map();
+        for (const def of getExportableCollections()) {
+          const dir = (0, import_node_path7.join)(this.exportDir, def.sourceSubdir);
+          if (!(0, import_node_fs5.existsSync)(dir))
+            continue;
+          for (const name of (0, import_node_fs5.readdirSync)(dir)) {
+            if (!name.endsWith(".md"))
+              continue;
+            const path = (0, import_node_path7.join)(dir, name);
+            let mtimeMs;
+            try {
+              mtimeMs = (0, import_node_fs5.statSync)(path).mtimeMs;
+            } catch {
+              continue;
+            }
+            onDisk.set(path, { docId: `qmd://${def.name}/${name}`, mtimeMs, collection: def.name });
+          }
+        }
+        const stored = /* @__PURE__ */ new Map();
+        for (const row of this.selectFiles.all()) {
+          stored.set(row.path, { docId: row.doc_id, mtimeMs: row.mtime_ms });
+        }
+        const toInsert = [];
+        const toReplace = [];
+        const metaUpserts = [];
+        for (const [path, info] of onDisk) {
+          const prior = stored.get(path);
+          if (prior !== void 0 && prior.mtimeMs === info.mtimeMs)
+            continue;
+          let content;
+          try {
+            content = (0, import_node_fs5.readFileSync)(path, "utf8");
+          } catch {
+            continue;
+          }
+          const doc = { id: info.docId, content, collection: info.collection };
+          if (prior === void 0)
+            toInsert.push(doc);
+          else
+            toReplace.push(doc);
+          metaUpserts.push({ path, docId: info.docId, mtimeMs: info.mtimeMs });
+        }
+        const toRemove = [];
+        for (const [path, prior] of stored) {
+          if (onDisk.has(path))
+            continue;
+          toRemove.push({ path, docId: prior.docId });
+        }
+        if (toInsert.length > 0)
+          this.backend.insert(toInsert);
+        if (toReplace.length > 0)
+          this.backend.index(toReplace);
+        if (toRemove.length > 0)
+          this.backend.remove(toRemove.map((r) => r.docId));
+        if (metaUpserts.length > 0 || toRemove.length > 0) {
+          const tx = this.db.transaction(() => {
+            for (const m of metaUpserts)
+              this.upsertFile.run(m.path, m.docId, m.mtimeMs);
+            for (const r of toRemove)
+              this.deleteFile.run(r.path);
+          });
+          tx();
+        }
+        return toInsert.length + toReplace.length;
+      }
+      /**
+       * BM25 search over the export tree, filtered to `allowedCollections`
+       * (empty array = no filter). Refreshes the index first (TTL-throttled).
+       */
+      search(query, k, allowedCollections) {
+        this.ensureFresh();
+        const hits = this.backend.search(query, k);
+        if (allowedCollections.length === 0)
+          return hits;
+        return hits.filter((h) => allowedCollections.includes(h.collection));
+      }
+      count() {
+        return this.backend.count();
+      }
+      close() {
+        this.backend.close();
+      }
+    };
+    managerCache = /* @__PURE__ */ new Map();
+  }
+});
+
+// ../qmd-team-intent-kb/packages/qmd-adapter/dist/adapter.js
+var import_node_fs6, import_node_path8, NATIVE_SEARCH_K, QmdAdapter;
+var init_adapter = __esm({
+  "../qmd-team-intent-kb/packages/qmd-adapter/dist/adapter.js"() {
+    "use strict";
+    import_node_fs6 = require("node:fs");
+    import_node_path8 = require("node:path");
     init_real_executor();
     init_collection_manager();
     init_collection_registry();
     init_search_client();
+    init_rrf_fusion();
     init_index_lifecycle();
     init_health_check();
     init_config();
+    init_native_index_manager();
+    NATIVE_SEARCH_K = 50;
     QmdAdapter = class {
       executor;
       collections;
       search;
       indexLifecycle;
+      native;
       exportDir;
       /** The single tenant this adapter's qmd registry + index are bound to. */
       tenantId;
+      /** The tenant this adapter serves (read-only; used by the search canary's fail-closed guard). */
+      get boundTenantId() {
+        return this.tenantId;
+      }
       constructor(config2, executor) {
         this.exportDir = config2.exportDir;
         this.tenantId = config2.tenantId;
@@ -39248,6 +39562,18 @@ var init_adapter = __esm({
         this.collections = new CollectionManager(this.executor);
         this.search = new SearchClient(this.executor);
         this.indexLifecycle = new IndexLifecycleManager(this.executor);
+        if (config2.disableNativeFusion === true) {
+          this.native = null;
+        } else {
+          try {
+            this.native = getNativeIndexManager({
+              exportDir: config2.exportDir,
+              indexPath: config2.nativeIndexPath ?? (0, import_node_path8.join)(getQmdTenantIndexPath(config2.tenantId), "native-fts5.sqlite")
+            });
+          } catch {
+            this.native = null;
+          }
+        }
       }
       /**
        * Run a search with curated-only default scope.
@@ -39272,7 +39598,28 @@ var init_adapter = __esm({
         if (tenantId !== this.tenantId) {
           return { ok: true, value: [] };
         }
-        return this.search.search(queryText, scope);
+        const effectiveScope = scope ?? "curated";
+        const qmdResult = await this.search.search(queryText, effectiveScope);
+        const nativeHits = this.nativeSearch(queryText, effectiveScope);
+        if (!qmdResult.ok) {
+          if (nativeHits.length > 0) {
+            return { ok: true, value: fuseReciprocalRank([], nativeHits) };
+          }
+          return qmdResult;
+        }
+        if (nativeHits.length === 0)
+          return qmdResult;
+        return { ok: true, value: fuseReciprocalRank(qmdResult.value, nativeHits) };
+      }
+      /** Native FTS5 half of the fused query. Any failure degrades to []. */
+      nativeSearch(queryText, scope) {
+        if (this.native === null)
+          return [];
+        try {
+          return this.native.search(queryText, NATIVE_SEARCH_K, resolveScopeCollections(scope));
+        } catch {
+          return [];
+        }
       }
       /** Check health of qmd and index state */
       async health() {
@@ -39290,7 +39637,7 @@ var init_adapter = __esm({
        */
       async ensureCollections() {
         for (const def of getExportableCollections()) {
-          (0, import_node_fs5.mkdirSync)((0, import_node_path7.join)(this.exportDir, def.sourceSubdir), { recursive: true });
+          (0, import_node_fs6.mkdirSync)((0, import_node_path8.join)(this.exportDir, def.sourceSubdir), { recursive: true });
         }
         return this.collections.ensureCollections(this.exportDir);
       }
@@ -39375,7 +39722,14 @@ var init_synthetic_v1 = __esm({
       /** 8/8 lexical queries hit. */
       lexicalRecallAtK: 1,
       /** 7/12 semantic queries hit. */
-      semanticRecallAtK: 7 / 12
+      semanticRecallAtK: 7 / 12,
+      /**
+       * 5/5 tokenization queries hit on the FUSED path (vps.2 RRF fusion of qmd +
+       * native FTS5). Measured with `disableNativeFusion: true` this stratum is
+       * 2/5 (the three multi-hyphen/dot queries miss) — the 2026-07-16 miss class
+       * this ratchet now permanently guards.
+       */
+      tokenizationRecallAtK: 1
     };
   }
 });
@@ -39394,20 +39748,12 @@ var init_eval = __esm({
   }
 });
 
-// ../qmd-team-intent-kb/packages/qmd-adapter/dist/native/fts5-backend.js
-var import_better_sqlite32;
-var init_fts5_backend = __esm({
-  "../qmd-team-intent-kb/packages/qmd-adapter/dist/native/fts5-backend.js"() {
-    "use strict";
-    import_better_sqlite32 = __toESM(require("better-sqlite3"), 1);
-  }
-});
-
 // ../qmd-team-intent-kb/packages/qmd-adapter/dist/native/index.js
 var init_native = __esm({
   "../qmd-team-intent-kb/packages/qmd-adapter/dist/native/index.js"() {
     "use strict";
     init_fts5_backend();
+    init_native_index_manager();
   }
 });
 
@@ -39444,6 +39790,8 @@ var init_dist4 = __esm({
     init_weights();
     init_eval();
     init_native();
+    init_rrf_fusion();
+    init_search_client();
     init_reindex();
     init_search_canary();
   }
@@ -40066,8 +40414,8 @@ var init_context_provider = __esm({
 async function writeToSpool(candidate, spoolDir, agentId) {
   const dir = spoolDir ?? getSpoolPath();
   const filename = agentId ? `spool-${agentId}.jsonl` : getSpoolFilename();
-  const filepath = (0, import_node_path8.resolve)(dir, filename);
-  const resolvedDir = (0, import_node_path8.resolve)(dir);
+  const filepath = (0, import_node_path9.resolve)(dir, filename);
+  const resolvedDir = (0, import_node_path9.resolve)(dir);
   if (!filepath.startsWith(resolvedDir + "/") && filepath !== resolvedDir) {
     return { ok: false, error: `Path traversal rejected: ${filename}` };
   }
@@ -40089,12 +40437,12 @@ async function writeToSpool(candidate, spoolDir, agentId) {
     return { ok: false, error: `Failed to write to spool: ${msg}` };
   }
 }
-var import_promises2, import_node_path8;
+var import_promises2, import_node_path9;
 var init_spool_writer = __esm({
   "../qmd-team-intent-kb/packages/claude-runtime/dist/spool/spool-writer.js"() {
     "use strict";
     import_promises2 = require("node:fs/promises");
-    import_node_path8 = require("node:path");
+    import_node_path9 = require("node:path");
     init_dist2();
     init_config2();
   }
@@ -40157,20 +40505,20 @@ async function listSpoolFiles(spoolDir) {
   const dir = spoolDir ?? getSpoolPath();
   try {
     const files = await (0, import_promises3.readdir)(dir);
-    const spoolFiles = files.filter((f) => f.startsWith("spool-") && f.endsWith(".jsonl")).sort().map((f) => (0, import_node_path9.join)(dir, f));
+    const spoolFiles = files.filter((f) => f.startsWith("spool-") && f.endsWith(".jsonl")).sort().map((f) => (0, import_node_path10.join)(dir, f));
     return { ok: true, value: spoolFiles };
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
     return { ok: false, error: `Failed to list spool files: ${msg}` };
   }
 }
-var import_node_crypto7, import_promises3, import_node_path9;
+var import_node_crypto7, import_promises3, import_node_path10;
 var init_spool_reader = __esm({
   "../qmd-team-intent-kb/packages/claude-runtime/dist/spool/spool-reader.js"() {
     "use strict";
     import_node_crypto7 = require("node:crypto");
     import_promises3 = require("node:fs/promises");
-    import_node_path9 = require("node:path");
+    import_node_path10 = require("node:path");
     init_dist();
     init_config2();
   }
@@ -40243,17 +40591,17 @@ function resolveConfig() {
   return {
     tenantId,
     basePath,
-    spoolPath: (0, import_node_path10.join)(basePath, "spool"),
-    dbPath: (0, import_node_path10.join)(basePath, "teamkb.db"),
-    feedbackPath: (0, import_node_path10.join)(basePath, "feedback"),
-    exportDir: envExport && envExport.length > 0 ? envExport : (0, import_node_path10.join)(basePath, "kb-export")
+    spoolPath: (0, import_node_path11.join)(basePath, "spool"),
+    dbPath: (0, import_node_path11.join)(basePath, "teamkb.db"),
+    feedbackPath: (0, import_node_path11.join)(basePath, "feedback"),
+    exportDir: envExport && envExport.length > 0 ? envExport : (0, import_node_path11.join)(basePath, "kb-export")
   };
 }
-var import_node_path10;
+var import_node_path11;
 var init_config3 = __esm({
   "src/config.ts"() {
     "use strict";
-    import_node_path10 = require("node:path");
+    import_node_path11 = require("node:path");
     init_dist2();
   }
 });
@@ -41204,23 +41552,23 @@ async function ingestFromSpoolDetailed(candidateRepo, spoolDir, opts) {
 async function archiveIngestedFile(spoolFilePath, archiveDir) {
   try {
     await (0, import_promises4.mkdir)(archiveDir, { recursive: true });
-    const dest = (0, import_node_path11.join)(archiveDir, (0, import_node_path11.basename)(spoolFilePath));
+    const dest = (0, import_node_path12.join)(archiveDir, (0, import_node_path12.basename)(spoolFilePath));
     await (0, import_promises4.rename)(spoolFilePath, dest);
     try {
       await (0, import_promises4.rename)(`${spoolFilePath}.manifest.json`, `${dest}.manifest.json`);
     } catch {
     }
   } catch (e) {
-    process.stderr.write(`[spool-intake] archive skipped for ${(0, import_node_path11.basename)(spoolFilePath)}: ${e instanceof Error ? e.message : String(e)}
+    process.stderr.write(`[spool-intake] archive skipped for ${(0, import_node_path12.basename)(spoolFilePath)}: ${e instanceof Error ? e.message : String(e)}
 `);
   }
 }
 async function quarantineTamperedFile(spoolFilePath, spoolDir, quarantineDirOverride, expected, actual) {
   try {
-    const baseDir = quarantineDirOverride ?? (0, import_node_path11.join)(spoolDir ?? ".", "quarantine");
+    const baseDir = quarantineDirOverride ?? (0, import_node_path12.join)(spoolDir ?? ".", "quarantine");
     await (0, import_promises4.mkdir)(baseDir, { recursive: true });
-    const name = (0, import_node_path11.basename)(spoolFilePath);
-    const dest = (0, import_node_path11.join)(baseDir, name);
+    const name = (0, import_node_path12.basename)(spoolFilePath);
+    const dest = (0, import_node_path12.join)(baseDir, name);
     const evidence = {
       spoolFile: name,
       detectedAt: (/* @__PURE__ */ new Date()).toISOString(),
@@ -41239,12 +41587,12 @@ async function quarantineTamperedFile(spoolFilePath, spoolDir, quarantineDirOver
     return null;
   }
 }
-var import_promises4, import_node_path11;
+var import_promises4, import_node_path12;
 var init_spool_intake = __esm({
   "../qmd-team-intent-kb/apps/curator/dist/intake/spool-intake.js"() {
     "use strict";
     import_promises4 = require("node:fs/promises");
-    import_node_path11 = require("node:path");
+    import_node_path12 = require("node:path");
     init_dist6();
     init_dist2();
   }
@@ -41451,22 +41799,22 @@ function detectChanges(memoryRepo, exportStateRepo, config2) {
   for (const memory of memories) {
     if (memory.lifecycle === "archived" || memory.lifecycle === "superseded") {
       const categoryDir = getCategoryDirectory(memory.category);
-      const fromPath = (0, import_node_path12.join)(config2.outputDir, categoryDir, `${memory.id}.md`);
-      const toPath = (0, import_node_path12.join)(config2.outputDir, getRelativePath2(memory));
+      const fromPath = (0, import_node_path13.join)(config2.outputDir, categoryDir, `${memory.id}.md`);
+      const toPath = (0, import_node_path13.join)(config2.outputDir, getRelativePath2(memory));
       toArchive.push({ memory, fromPath, toPath });
     } else {
-      const filePath = (0, import_node_path12.join)(config2.outputDir, getRelativePath2(memory));
+      const filePath = (0, import_node_path13.join)(config2.outputDir, getRelativePath2(memory));
       toWrite.push({ memory, filePath });
     }
   }
   return { toWrite, toArchive, toRemove: [] };
 }
-var import_node_path12;
+var import_node_path13;
 var init_change_detector = __esm({
   "../qmd-team-intent-kb/apps/git-exporter/dist/diff/change-detector.js"() {
     "use strict";
     init_directory_mapper();
-    import_node_path12 = require("node:path");
+    import_node_path13 = require("node:path");
   }
 });
 
@@ -41480,8 +41828,8 @@ function assertPathSafe(filePath, allowedRoot) {
     throw new Error("Unsafe file path: Path contains directory traversal (..)");
   }
   if (allowedRoot !== void 0) {
-    const resolved = (0, import_node_path13.resolve)(filePath);
-    const resolvedRoot = (0, import_node_path13.resolve)(allowedRoot);
+    const resolved = (0, import_node_path14.resolve)(filePath);
+    const resolvedRoot = (0, import_node_path14.resolve)(allowedRoot);
     if (!resolved.startsWith(resolvedRoot + "/") && resolved !== resolvedRoot) {
       throw new Error(`Path traversal rejected: ${filePath} is outside ${allowedRoot}`);
     }
@@ -41489,36 +41837,36 @@ function assertPathSafe(filePath, allowedRoot) {
 }
 function writeFile3(filePath, content, exportRoot) {
   assertPathSafe(filePath, exportRoot);
-  (0, import_node_fs6.mkdirSync)((0, import_node_path13.dirname)(filePath), { recursive: true });
-  (0, import_node_fs6.writeFileSync)(filePath, content, "utf8");
+  (0, import_node_fs7.mkdirSync)((0, import_node_path14.dirname)(filePath), { recursive: true });
+  (0, import_node_fs7.writeFileSync)(filePath, content, "utf8");
 }
 function archiveFile(fromPath, toPath, content, exportRoot) {
   assertPathSafe(toPath, exportRoot);
   if (exportRoot !== void 0) {
     assertPathSafe(fromPath, exportRoot);
   }
-  (0, import_node_fs6.mkdirSync)((0, import_node_path13.dirname)(toPath), { recursive: true });
-  if ((0, import_node_fs6.existsSync)(fromPath)) {
-    (0, import_node_fs6.unlinkSync)(fromPath);
+  (0, import_node_fs7.mkdirSync)((0, import_node_path14.dirname)(toPath), { recursive: true });
+  if ((0, import_node_fs7.existsSync)(fromPath)) {
+    (0, import_node_fs7.unlinkSync)(fromPath);
   }
-  (0, import_node_fs6.writeFileSync)(toPath, content, "utf8");
+  (0, import_node_fs7.writeFileSync)(toPath, content, "utf8");
 }
 function removeFile(filePath, exportRoot) {
   if (exportRoot !== void 0) {
     assertPathSafe(filePath, exportRoot);
   }
-  if ((0, import_node_fs6.existsSync)(filePath)) {
-    (0, import_node_fs6.unlinkSync)(filePath);
+  if ((0, import_node_fs7.existsSync)(filePath)) {
+    (0, import_node_fs7.unlinkSync)(filePath);
     return true;
   }
   return false;
 }
-var import_node_fs6, import_node_path13;
+var import_node_fs7, import_node_path14;
 var init_file_writer = __esm({
   "../qmd-team-intent-kb/apps/git-exporter/dist/writer/file-writer.js"() {
     "use strict";
-    import_node_fs6 = require("node:fs");
-    import_node_path13 = require("node:path");
+    import_node_fs7 = require("node:fs");
+    import_node_path14 = require("node:path");
   }
 });
 
@@ -41540,8 +41888,8 @@ function runExport(memoryRepo, exportStateRepo, config2, nowFn = () => (/* @__PU
       continue;
     }
     const content = formatMemoryAsMarkdown(item.memory);
-    if ((0, import_node_fs7.existsSync)(item.filePath)) {
-      const existing = (0, import_node_fs7.readFileSync)(item.filePath, "utf8");
+    if ((0, import_node_fs8.existsSync)(item.filePath)) {
+      const existing = (0, import_node_fs8.readFileSync)(item.filePath, "utf8");
       if (existing === content) {
         unchanged++;
         continue;
@@ -41574,7 +41922,7 @@ function runExport(memoryRepo, exportStateRepo, config2, nowFn = () => (/* @__PU
     totalProcessed: changeset.toWrite.length + changeset.toArchive.length + changeset.toRemove.length
   };
 }
-var import_node_fs7, CONFIDENTIAL_INDEX;
+var import_node_fs8, CONFIDENTIAL_INDEX;
 var init_exporter = __esm({
   "../qmd-team-intent-kb/apps/git-exporter/dist/exporter.js"() {
     "use strict";
@@ -41582,7 +41930,7 @@ var init_exporter = __esm({
     init_change_detector();
     init_markdown_formatter();
     init_file_writer();
-    import_node_fs7 = require("node:fs");
+    import_node_fs8 = require("node:fs");
     CONFIDENTIAL_INDEX = Sensitivity.options.indexOf("confidential");
   }
 });
@@ -41669,7 +42017,7 @@ function commitAnchor(auditDir) {
   };
   const git = (args) => (0, import_node_child_process3.execFileSync)("git", args, { cwd: auditDir, stdio: "ignore", env });
   try {
-    if (!(0, import_node_fs8.existsSync)((0, import_node_path14.join)(auditDir, ".git"))) git(["init", "-q"]);
+    if (!(0, import_node_fs9.existsSync)((0, import_node_path15.join)(auditDir, ".git"))) git(["init", "-q"]);
     git(["add", "anchors.jsonl"]);
     git(["commit", "-q", "-m", `anchor ${(/* @__PURE__ */ new Date()).toISOString()}`]);
     try {
@@ -41685,9 +42033,9 @@ function commitAnchor(auditDir) {
 }
 function anchorChainHead(auditRepo, basePath, tenantId) {
   try {
-    const auditDir = (0, import_node_path14.join)(basePath, "audit");
-    (0, import_node_fs8.mkdirSync)(auditDir, { recursive: true });
-    const rec = appendAnchor(auditRepo, (0, import_node_path14.join)(auditDir, "anchors.jsonl"), { tenantId });
+    const auditDir = (0, import_node_path15.join)(basePath, "audit");
+    (0, import_node_fs9.mkdirSync)(auditDir, { recursive: true });
+    const rec = appendAnchor(auditRepo, (0, import_node_path15.join)(auditDir, "anchors.jsonl"), { tenantId });
     return {
       chainHead: rec.chainHead,
       chainedRows: rec.chainedRows,
@@ -41697,14 +42045,14 @@ function anchorChainHead(auditRepo, basePath, tenantId) {
     return void 0;
   }
 }
-var import_node_child_process3, import_node_fs8, import_node_path14;
+var import_node_child_process3, import_node_fs9, import_node_path15;
 var init_anchor = __esm({
   "src/anchor.ts"() {
     "use strict";
     init_dist3();
     import_node_child_process3 = require("node:child_process");
-    import_node_fs8 = require("node:fs");
-    import_node_path14 = require("node:path");
+    import_node_fs9 = require("node:fs");
+    import_node_path15 = require("node:path");
   }
 });
 
@@ -41722,9 +42070,9 @@ function isContention(err2) {
   return err2.code === "EAGAIN" || err2.code === "EWOULDBLOCK";
 }
 async function acquireWriteLock(basePath, timeoutMs = DEFAULT_TIMEOUT_MS) {
-  (0, import_node_fs9.mkdirSync)(basePath, { recursive: true });
-  const lockPath = (0, import_node_path15.join)(basePath, LOCK_FILENAME);
-  const fd = (0, import_node_fs9.openSync)(lockPath, "a");
+  (0, import_node_fs10.mkdirSync)(basePath, { recursive: true });
+  const lockPath = (0, import_node_path16.join)(basePath, LOCK_FILENAME);
+  const fd = (0, import_node_fs10.openSync)(lockPath, "a");
   const deadline = Date.now() + Math.max(0, timeoutMs);
   for (; ; ) {
     const err2 = await tryFlockExclusive(fd);
@@ -41736,7 +42084,7 @@ async function acquireWriteLock(basePath, timeoutMs = DEFAULT_TIMEOUT_MS) {
           } catch {
           } finally {
             try {
-              (0, import_node_fs9.closeSync)(fd);
+              (0, import_node_fs10.closeSync)(fd);
             } catch {
             }
           }
@@ -41745,14 +42093,14 @@ async function acquireWriteLock(basePath, timeoutMs = DEFAULT_TIMEOUT_MS) {
     }
     if (!isContention(err2)) {
       try {
-        (0, import_node_fs9.closeSync)(fd);
+        (0, import_node_fs10.closeSync)(fd);
       } catch {
       }
       throw err2;
     }
     if (Date.now() >= deadline) {
       try {
-        (0, import_node_fs9.closeSync)(fd);
+        (0, import_node_fs10.closeSync)(fd);
       } catch {
       }
       throw new WriteLockBusyError();
@@ -41760,12 +42108,12 @@ async function acquireWriteLock(basePath, timeoutMs = DEFAULT_TIMEOUT_MS) {
     await sleep(RETRY_INTERVAL_MS);
   }
 }
-var import_node_fs9, import_node_path15, import_fs_ext, LOCK_FILENAME, DEFAULT_TIMEOUT_MS, RETRY_INTERVAL_MS, WriteLockBusyError, sleep;
+var import_node_fs10, import_node_path16, import_fs_ext, LOCK_FILENAME, DEFAULT_TIMEOUT_MS, RETRY_INTERVAL_MS, WriteLockBusyError, sleep;
 var init_write_lock = __esm({
   "src/write-lock.ts"() {
     "use strict";
-    import_node_fs9 = require("node:fs");
-    import_node_path15 = require("node:path");
+    import_node_fs10 = require("node:fs");
+    import_node_path16 = require("node:path");
     import_fs_ext = require("fs-ext");
     LOCK_FILENAME = ".write.lock";
     DEFAULT_TIMEOUT_MS = 8e3;
@@ -41806,7 +42154,7 @@ async function runGovernLocked(config2) {
       );
     }
     const ingestResult = await ingestFromSpool(candidateRepo, config2.spoolPath, {
-      archiveIngestedDir: (0, import_node_path16.join)(config2.spoolPath, "ingested")
+      archiveIngestedDir: (0, import_node_path17.join)(config2.spoolPath, "ingested")
     });
     const ingested = ingestResult.ok ? ingestResult.value.length : 0;
     const curation = sweepInbox(config2, { candidateRepo, memoryRepo, policyRepo, auditRepo });
@@ -41950,12 +42298,12 @@ function sweepInbox(config2, deps) {
 function isMemberAuthored(candidate) {
   return candidate.metadata?.proposedByRole === "member";
 }
-var import_node_crypto10, import_node_path16, SWEEP_RECEIPT_MEMORY_ID;
+var import_node_crypto10, import_node_path17, SWEEP_RECEIPT_MEMORY_ID;
 var init_govern = __esm({
   "src/govern.ts"() {
     "use strict";
     import_node_crypto10 = require("node:crypto");
-    import_node_path16 = require("node:path");
+    import_node_path17 = require("node:path");
     init_dist8();
     init_dist9();
     init_dist2();
@@ -41984,11 +42332,11 @@ function isMissingNativeDep(e) {
   );
 }
 function manifestPath(basePath) {
-  return (0, import_node_path17.join)(basePath, "audit", "exceptions.manifest.json");
+  return (0, import_node_path18.join)(basePath, "audit", "exceptions.manifest.json");
 }
 function loadExceptionManifest(basePath) {
   const p = manifestPath(basePath);
-  if (!(0, import_node_fs10.existsSync)(p)) return null;
+  if (!(0, import_node_fs11.existsSync)(p)) return null;
   try {
     return readManifest(p);
   } catch (e) {
@@ -42038,18 +42386,19 @@ async function startLocalServer() {
 `
   );
 }
-var import_node_crypto11, import_node_fs10, import_zod18, import_node_path17, VERSION2, config, CATEGORIES2, NATIVE_DEP_HINT, server2;
+var import_node_crypto11, import_node_fs11, import_zod18, import_node_path18, VERSION2, config, CATEGORIES2, NATIVE_DEP_HINT, server2;
 var init_local_server = __esm({
   "src/local-server.ts"() {
     "use strict";
     import_node_crypto11 = require("node:crypto");
-    import_node_fs10 = require("node:fs");
+    import_node_fs11 = require("node:fs");
     init_mcp();
     init_stdio2();
     import_zod18 = __toESM(require_zod(), 1);
-    import_node_path17 = require("node:path");
+    import_node_path18 = require("node:path");
     init_dist3();
     init_dist4();
+    init_dist2();
     init_dist6();
     init_dist();
     init_config3();
@@ -42092,7 +42441,37 @@ var init_local_server = __esm({
             note: "qmd search returned no index \u2014 install qmd 2.x on PATH and run brain_govern to build it."
           });
         }
-        const results = res.value.slice(0, limit).map((r) => ({
+        const nowIso = (/* @__PURE__ */ new Date()).toISOString();
+        let ranked = res.value;
+        let db;
+        try {
+          db = createDatabase({ path: config.dbPath, readonly: true });
+          const repo = new MemoryRepository(db);
+          const maxScore = res.value.reduce((m, h) => h.score > m ? h.score : m, 0);
+          const normalised = res.value.map((h, i) => ({
+            ...h,
+            score: maxScore > 0 ? Math.min(Math.max(h.score / maxScore, 0), 1) : res.value.length > 0 ? (res.value.length - i) / res.value.length : 0
+          }));
+          const reranked = rerankCitedHits(
+            normalised,
+            (memoryId) => {
+              const m = repo.findById(memoryId);
+              return m ? { category: m.category, updatedAt: m.updatedAt } : null;
+            },
+            nowIso
+          );
+          ranked = reranked.map((r) => ({
+            file: r.file,
+            snippet: r.snippet,
+            score: Math.min(r.finalScore, 1),
+            collection: r.collection
+          }));
+        } catch {
+          ranked = res.value;
+        } finally {
+          db?.close();
+        }
+        const results = ranked.slice(0, limit).map((r) => ({
           citation: r.file,
           snippet: r.snippet,
           score: r.score,
@@ -42148,7 +42527,7 @@ var init_local_server = __esm({
         }
         try {
           const auditRepo = new AuditRepository(db);
-          const result = verifyAnchors(auditRepo, (0, import_node_path17.join)(config.basePath, "audit", "anchors.jsonl"));
+          const result = verifyAnchors(auditRepo, (0, import_node_path18.join)(config.basePath, "audit", "anchors.jsonl"));
           const manifest = loadExceptionManifest(config.basePath);
           const rowsById = buildRowsById(auditRepo);
           const classified = classifyChainBreaks(result.chain.breaks, manifest, rowsById);

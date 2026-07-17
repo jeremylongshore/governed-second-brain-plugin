@@ -29,6 +29,7 @@ import {
   type StoredRowTuple,
 } from '@qmd-team-intent-kb/store';
 import { QmdAdapter } from '@qmd-team-intent-kb/qmd-adapter';
+import { rerankCitedHits } from '@qmd-team-intent-kb/common';
 import { writeToSpool } from '@qmd-team-intent-kb/claude-runtime';
 import { validateTransition } from '@qmd-team-intent-kb/schema';
 import type { MemoryCandidate } from '@qmd-team-intent-kb/schema';
@@ -187,7 +188,58 @@ server.tool(
         note: 'qmd search returned no index — install qmd 2.x on PATH and run brain_govern to build it.',
       });
     }
-    const results = res.value.slice(0, limit).map((r) => ({
+    // R1 freshness + category rerank over the R2-fused cited hits.
+    // adapter.query already fuses the qmd binary with the native FTS5 backend
+    // (reciprocal-rank fusion, INTKB #257) — that comes for free with the
+    // rebundle. What the local path historically SKIPPED is the freshness/
+    // category rerank the INTKB API's SearchService.searchViaQmd applies (INTKB
+    // #256): the local server returned adapter.query results raw. Wire it in
+    // here so local mode ranks the same way the team path does — resolve each
+    // qmd citation back to its governed store row for {category, updatedAt},
+    // opening the local DB read-only purely for that metadata lookup. If the DB
+    // can't open (missing native store, empty brain), degrade to the un-reranked
+    // fused order rather than break search.
+    const nowIso = new Date().toISOString();
+    let ranked: Array<{ file: string; snippet: string; score: number; collection: string }> = res.value;
+    let db;
+    try {
+      db = createDatabase({ path: config.dbPath, readonly: true });
+      const repo = new MemoryRepository(db);
+      // Normalise the qmd/fusion scores to [0,1] against the top hit BEFORE the
+      // rerank: exact hits can all score 0, and multiplying freshness into raw
+      // zeros would erase the ordering (mirrors SearchService.searchViaQmd).
+      const maxScore = res.value.reduce((m, h) => (h.score > m ? h.score : m), 0);
+      const normalised = res.value.map((h, i) => ({
+        ...h,
+        score:
+          maxScore > 0
+            ? Math.min(Math.max(h.score / maxScore, 0), 1)
+            : res.value.length > 0
+              ? (res.value.length - i) / res.value.length
+              : 0,
+      }));
+      const reranked = rerankCitedHits(
+        normalised,
+        (memoryId) => {
+          const m = repo.findById(memoryId);
+          return m ? { category: m.category, updatedAt: m.updatedAt } : null;
+        },
+        nowIso,
+      );
+      ranked = reranked.map((r) => ({
+        file: r.file,
+        snippet: r.snippet,
+        score: Math.min(r.finalScore, 1),
+        collection: r.collection,
+      }));
+    } catch {
+      // The rerank needs the store for {category, updatedAt}; if it's
+      // unavailable, keep the raw fused order — never fail search over ranking.
+      ranked = res.value;
+    } finally {
+      db?.close();
+    }
+    const results = ranked.slice(0, limit).map((r) => ({
       citation: r.file,
       snippet: r.snippet,
       score: r.score,
