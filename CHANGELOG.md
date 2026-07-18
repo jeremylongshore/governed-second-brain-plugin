@@ -1,16 +1,5 @@
 # Changelog
 
-## [1.1.2] - 2026-07-16
-
-### Fixed
-
-- **Local mode now starts from a clean Claude/Codex marketplace install.** The MCP manifest runs a
-  dependency-free bootstrap that provisions the exact lockfile-pinned `better-sqlite3` and `fs-ext`
-  native modules on first local start. Team mode still starts with zero installation and never loads
-  the local store. Concurrent starts serialize the one-time install and stale locks fail safely.
-- Added a clean-copy regression smoke that begins without `node_modules`, starts the shipped MCP
-  artifact, and proves disposable capture → govern → status → audit verification plus cleanup.
-
 All notable changes to the **Governed Second Brain** plugin are documented here. This is the
 installable Claude Code + Cowork plugin (a local stdio MCP server); the engines it bundles
 (`ico` / `qmd` / govern kernel) carry their own changelogs in their repos. Format based on
@@ -18,6 +7,24 @@ installable Claude Code + Cowork plugin (a local stdio MCP server); the engines 
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+
+### Changed
+
+- **Local-mode `brain_search` now runs the full retrieval stack.** After rebundling the in-process
+  engine against the INTKB upgrades, local search runs native-FTS5 + `qmd` reciprocal-rank fusion
+  inside `adapter.query()`, then replicates the API's freshness/category rerank in
+  `src/local-server.ts` (read-only store lookup for `{category, updatedAt}`, fused scores normalized to
+  `[0,1]` before the freshness multiply, raw-order fallback if the store can't open). Local mode stays
+  network-free while matching the team path's ranking; two 2026-07-16 incident queries that returned 0
+  hits now return the correct governed memory with a `qmd://` citation. (#48)
+
+### Added
+
+- **Per-platform install instructions.** The README and `onboarding/README.md` now spell out that the
+  plugin runs in **Claude Code or Cowork** (same `/plugin` install), takes a **manual `mcpServers`
+  config on Claude Desktop**, and **cannot** run in claude.ai in a browser or the phone apps — plus a
+  **Windows** path (`/plugin` commands + `%USERPROFILE%\.teamkb\team.json`) alongside the macOS
+  one-click installer.
 
 ### Fixed
 
@@ -32,9 +39,6 @@ installable Claude Code + Cowork plugin (a local stdio MCP server); the engines 
   `deriveCandidateId` uses session keys when `sessionId` is provided; without `sessionId` keeps
   content-hash UUIDv5 for manual `/brain-save`. Outbox freezes final POST body; drain replays
   file bytes only. Surfaces `intake` / `alreadyExists` from the server.
-
-### Fixed
-
 - **`/brain` now retries with keywords when a full-sentence question returns nothing.** Retrieval is
   keyword-AND, so a natural question ("what did the team ship this week?") could return zero even when
   the topic is well covered — a new user running the suggested proof query saw an empty result and
@@ -42,14 +46,31 @@ installable Claude Code + Cowork plugin (a local stdio MCP server); the engines 
   with the strong keywords before reporting empty, and the onboarding proof query is now a keyword
   query (`shipped this week`) in the README and the macOS installer. (The deeper retrieval-side
   OR-fallback is tracked separately.)
+- **README + GitHub description corrected for rebundled local retrieval and the two-mode network
+  story.** The `brain_search` tool-surface row now states local search runs native-FTS5 + `qmd` RRF
+  fusion then a freshness/category rerank (it was silent on both); the stale `governed-second-brain`
+  umbrella links point to `bobs-big-brain-umbrella`; and the blanket "No daemon, no network"
+  description becomes "local needs no daemon or network; team connects to the one brain over your
+  tailnet" (the old line mis-described team mode). (#49)
 
-### Added
+### Added (internal)
 
-- **Per-platform install instructions.** The README and `onboarding/README.md` now spell out that the
-  plugin runs in **Claude Code or Cowork** (same `/plugin` install), takes a **manual `mcpServers`
-  config on Claude Desktop**, and **cannot** run in claude.ai in a browser or the phone apps — plus a
-  **Windows** path (`/plugin` commands + `%USERPROFILE%\.teamkb\team.json`) alongside the macOS
-  one-click installer.
+- **Advisory MiniMax-M3 two-lane PR reviewer** (`.github/workflows/minimax-review.yml` + `REVIEW.md`).
+  A defect lane (secret/credential leaks, mode-boundary breaks, rebundle drift, honesty-word
+  violations) and an adversarial claims lane (audits the PR description + changed docs against the
+  actual diff). Advisory only — never a required check; uses the fork-safe `pull_request` trigger with
+  a same-repo guard so forked PRs never receive the API key. (#47)
+
+## [1.1.2] - 2026-07-16
+
+### Fixed
+
+- **Local mode now starts from a clean Claude/Codex marketplace install.** The MCP manifest runs a
+  dependency-free bootstrap that provisions the exact lockfile-pinned `better-sqlite3` and `fs-ext`
+  native modules on first local start. Team mode still starts with zero installation and never loads
+  the local store. Concurrent starts serialize the one-time install and stale locks fail safely.
+- Added a clean-copy regression smoke that begins without `node_modules`, starts the shipped MCP
+  artifact, and proves disposable capture → govern → status → audit verification plus cleanup.
 
 ## [1.1.1] - 2026-07-13
 
