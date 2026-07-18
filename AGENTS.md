@@ -109,9 +109,13 @@ can edit an event *and* re-hash forward. Keep the "What the receipt does *not* d
 **Forbidden words:** tamper-proof, immutable, non-repudiation (for local mode), blockchain.
 
 ## Retrieval roadmap
-`brain_search` uses **BM25** (`qmd search`) today — zero ML, cited hits. A *lean* native sqlite-vec
-semantic backend (EmbeddingGemma-300M, eval-gated, SHA-256-pinned weights) is **roadmapped, not
-shipped**; qmd's 2.2 GB hybrid is skipped (heavier *and* unwired). Canonical record:
+`brain_search` runs **lexical fusion** today — the `qmd search` BM25 results fused with a native
+in-process FTS5 (BM25) backend via deterministic reciprocal-rank fusion (RRF, k=60), then a
+freshness/category rerank — zero ML, cited hits. (The fusion kills the keyword-AND miss class where
+`qmd` alone dropped hyphen/dot-joined terms like `governed-brain` / `CLAUDE.md`.) A *lean* native
+sqlite-vec **semantic** backend (EmbeddingGemma-300M, eval-gated, SHA-256-pinned weights) is
+**roadmapped, not shipped** — it builds only if the retrieval eval falls below the 0.85 Recall@10
+gate; qmd's 2.2 GB hybrid is skipped (heavier *and* unwired). Canonical record:
 `qmd-team-intent-kb/000-docs/038-AT-DECR`; epic `qmd-team-intent-kb-0t9`.
 
 ## Tracking

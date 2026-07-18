@@ -19,7 +19,7 @@
 
 | | Repo | What it is |
 |---|---|---|
-| **Landing / thesis** | **[intent-solutions-io/governed-second-brain](https://github.com/intent-solutions-io/governed-second-brain)** | The umbrella — *why* this exists, the competitive teardown, the "Compile, Then Govern" thesis, the receipts argument. Start here for the **story**. |
+| **Landing / thesis** | **[intent-solutions-io/bobs-big-brain-umbrella](https://github.com/intent-solutions-io/bobs-big-brain-umbrella)** | The umbrella — *why* this exists, the competitive teardown, the "Compile, Then Govern" thesis, the receipts argument. Start here for the **story**. |
 | **The plugin** (you are here) | **[jeremylongshore/bobs-big-brain-plugin](https://github.com/jeremylongshore/bobs-big-brain-plugin)** | The installable code — the local stdio MCP server + skills. Start here to **run it**. |
 
 It stacks on three engines:
@@ -47,7 +47,7 @@ optional ICO *compile* step is the only thing that egresses, and it's opt-in).
 
 | Tool | Kind | What it does |
 |---|---|---|
-| `brain_search` | read | Cited search over your governed memory (`qmd://` receipts), in-process |
+| `brain_search` | read | Cited search over your governed memory (`qmd://` receipts), in-process — native-FTS5 + `qmd` reciprocal-rank fusion, then a freshness/category rerank |
 | `brain_status` | read | Counts by lifecycle state + category |
 | `brain_audit_verify` | read | Verify the audit trail — the SHA-256 hash chain **and** the external anchor log; flags any tamper |
 | `brain_capture` | write | Capture a fact as a governance **proposal** (to the local spool) |
@@ -203,5 +203,5 @@ Apache-2.0. The umbrella and both engine repos are Apache-2.0; qmd (upstream) is
 <p align="center">
   Built by <a href="https://github.com/jeremylongshore">Jeremy Longshore</a> ·
   <a href="https://intentsolutions.io/">Intent Solutions</a> ·
-  thesis at <a href="https://github.com/intent-solutions-io/governed-second-brain">intent-solutions-io/governed-second-brain</a>
+  thesis at <a href="https://github.com/intent-solutions-io/bobs-big-brain-umbrella">intent-solutions-io/bobs-big-brain-umbrella</a>
 </p>
