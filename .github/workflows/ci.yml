@@ -111,3 +111,9 @@ jobs:
           out=$(node --test scripts/anchor-conformance.test.mjs 2>&1) || { echo "$out"; exit 1; }
           echo "$out" | tail -12
           echo "$out" | grep -q '# skipped 0' || { echo "::error::conformance store cases SKIPPED — the sibling store was not provisioned"; exit 1; }
+      # R3: re-anchor after brain_transition. esbuild-transpiles src/anchor.ts, so it
+      # needs the public sibling checked out + the plugin pnpm-installed — both already
+      # done above in this job. Mirrors the anchor-conformance invocation exactly.
+      - name: Anchor-on-transition re-anchor (R3)
+        working-directory: bobs-big-brain-plugin
+        run: node --test scripts/anchor-on-transition.test.mjs

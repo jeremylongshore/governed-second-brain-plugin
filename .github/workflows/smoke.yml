@@ -76,3 +76,10 @@ jobs:
       # transcript). Zero egress (a stub `claude` on PATH; no model invoked).
       - name: Smoke — auto-capture hook guards (opt-in, no-op unless enabled)
         run: node --test smoke/autocapture-hook.test.mjs
+
+      # R8: the 3-state brain_audit_verify honesty banner — a benign same-timestamp
+      # CHAIN_FORK must NOT surface a false "TAMPER" klaxon. Drives the committed bundle
+      # (plugin-runtime/governed-brain.cjs) over stdio; needs only better-sqlite3 (already
+      # provisioned above). Zero egress.
+      - name: Smoke — audit-verify banner honesty (3-state, no false klaxon)
+        run: node --test smoke/audit-verify-banner.test.mjs
