@@ -39,7 +39,7 @@ and smokes it rather than rebuilding it.
 
 ## The CI constraint (why not everything runs in plain CI)
 
-The build-only devDeps are `link:../qmd-team-intent-kb/*` — a **private sibling monorepo
+The build-only devDeps are `link:../bobs-big-brain-registrar/*` — a **sibling monorepo
 that does not exist in a fresh GitHub Actions checkout**. So full `build` and full
 `typecheck` cannot run in generic CI. CI therefore gates the surface reachable **without**
 the sibling (eslint parse-only over all `src/`, a scoped `typecheck:ci`, the vitest unit

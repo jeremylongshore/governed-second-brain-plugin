@@ -51,7 +51,7 @@ banner — ok:true with N benign CHAIN_FORK forks is NOT tamper; ok:false IS. Ne
 
 ## Related repos (multi-repo context)
 
-This plugin bundles the INTKB (`qmd-team-intent-kb`) govern engine and points at the ICO
-(`intentional-cognition-os`) compile engine; all sit under the `intent-solutions-io/governed-second-brain`
-umbrella. Greptile's config schema has no multi-repo key, so these are noted here for reviewer
+This plugin bundles the Bob's Big Brain Registrar (`bobs-big-brain-registrar`) govern engine and points
+at the Bob's Big Brain Compiler (`bobs-big-brain-compiler`) compile engine; all sit under the
+`intent-solutions-io/bobs-big-brain-umbrella` umbrella. Greptile's config schema has no multi-repo key, so these are noted here for reviewer
 context. Full topology + the code-verified system map: umbrella `000-docs/005-AT-ARCH` + `007-AT-SMAP`.

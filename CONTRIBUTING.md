@@ -9,8 +9,8 @@ itself (the MCP server, its tools, the install/packaging path, docs) are welcome
 | Change | Repo |
 |---|---|
 | Plugin MCP server, its tools, packaging, install flow | **here** (`bobs-big-brain-plugin`) |
-| The compiler (passes, kernel, `ico` CLI) | [intentional-cognition-os](https://github.com/jeremylongshore/intentional-cognition-os) (ICO) |
-| The governance control plane (dedupe / policy / promotion / audit) | [qmd-team-intent-kb](https://github.com/jeremylongshore/qmd-team-intent-kb) (INTKB) |
+| The compiler (passes, kernel, `ico` CLI) | [bobs-big-brain-compiler](https://github.com/jeremylongshore/bobs-big-brain-compiler) (Bob's Big Brain Compiler) |
+| The governance control plane (dedupe / policy / promotion / audit) | [bobs-big-brain-registrar](https://github.com/jeremylongshore/bobs-big-brain-registrar) (Bob's Big Brain Registrar) |
 | On-device retrieval | upstream [qmd](https://github.com/tobi/qmd) (pinned dependency) |
 
 The engines are bundled at pinned versions via `gsb.lock.json` — bumping an engine is a lockfile

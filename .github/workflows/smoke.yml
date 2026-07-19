@@ -6,7 +6,7 @@ name: Smoke (full chain)
 #
 # This tests the SHIPPED artifact (plugin-runtime/governed-brain.cjs, which
 # inlines the private INTKB packages), so the build is intentionally NOT run here
-# — it needs the sibling qmd-team-intent-kb monorepo that only exists locally.
+# — it needs the sibling bobs-big-brain-registrar monorepo that only exists locally.
 
 on:
   push:
@@ -32,7 +32,7 @@ jobs:
         run: node smoke/check-lock.mjs
 
       # The committed bundle inlines INTKB, so CI never builds — and the build-only
-      # devDeps are `link:../qmd-team-intent-kb/*`, which don't exist here. Strip
+      # devDeps are `link:../bobs-big-brain-registrar/*`, which don't exist here. Strip
       # them, then install just the prod deps (the MCP SDK for the smoke client +
       # better-sqlite3, the bundle's one external native dep).
       - name: Install runtime deps for the committed bundle

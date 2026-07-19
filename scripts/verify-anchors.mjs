@@ -26,7 +26,7 @@
  * with the `anchorHash` field itself EXCLUDED from the hashed body.
  *
  * This canonical body serialisation is REPLICATED here on purpose (see
- * qmd-team-intent-kb/packages/store/src/audit-anchor.ts `anchorBodyJson` /
+ * bobs-big-brain-registrar/packages/store/src/audit-anchor.ts `anchorBodyJson` /
  * `computeAnchorHash`) — it is deliberately NOT imported, so verification does not
  * depend on the code under audit.
  * --------------------------------------------------------------------------------

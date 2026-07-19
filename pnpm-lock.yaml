@@ -25,29 +25,29 @@ importers:
         specifier: ^1.3.0
         version: 1.3.0
       '@qmd-team-intent-kb/claude-runtime':
-        specifier: link:../qmd-team-intent-kb/packages/claude-runtime
-        version: link:../qmd-team-intent-kb/packages/claude-runtime
+        specifier: link:../bobs-big-brain-registrar/packages/claude-runtime
+        version: link:../bobs-big-brain-registrar/packages/claude-runtime
       '@qmd-team-intent-kb/common':
-        specifier: link:../qmd-team-intent-kb/packages/common
-        version: link:../qmd-team-intent-kb/packages/common
+        specifier: link:../bobs-big-brain-registrar/packages/common
+        version: link:../bobs-big-brain-registrar/packages/common
       '@qmd-team-intent-kb/curator':
-        specifier: link:../qmd-team-intent-kb/apps/curator
-        version: link:../qmd-team-intent-kb/apps/curator
+        specifier: link:../bobs-big-brain-registrar/apps/curator
+        version: link:../bobs-big-brain-registrar/apps/curator
       '@qmd-team-intent-kb/git-exporter':
-        specifier: link:../qmd-team-intent-kb/apps/git-exporter
-        version: link:../qmd-team-intent-kb/apps/git-exporter
+        specifier: link:../bobs-big-brain-registrar/apps/git-exporter
+        version: link:../bobs-big-brain-registrar/apps/git-exporter
       '@qmd-team-intent-kb/policy-engine':
-        specifier: link:../qmd-team-intent-kb/packages/policy-engine
-        version: link:../qmd-team-intent-kb/packages/policy-engine
+        specifier: link:../bobs-big-brain-registrar/packages/policy-engine
+        version: link:../bobs-big-brain-registrar/packages/policy-engine
       '@qmd-team-intent-kb/qmd-adapter':
-        specifier: link:../qmd-team-intent-kb/packages/qmd-adapter
-        version: link:../qmd-team-intent-kb/packages/qmd-adapter
+        specifier: link:../bobs-big-brain-registrar/packages/qmd-adapter
+        version: link:../bobs-big-brain-registrar/packages/qmd-adapter
       '@qmd-team-intent-kb/schema':
-        specifier: link:../qmd-team-intent-kb/packages/schema
-        version: link:../qmd-team-intent-kb/packages/schema
+        specifier: link:../bobs-big-brain-registrar/packages/schema
+        version: link:../bobs-big-brain-registrar/packages/schema
       '@qmd-team-intent-kb/store':
-        specifier: link:../qmd-team-intent-kb/packages/store
-        version: link:../qmd-team-intent-kb/packages/store
+        specifier: link:../bobs-big-brain-registrar/packages/store
+        version: link:../bobs-big-brain-registrar/packages/store
       '@types/better-sqlite3':
         specifier: ^7.6.11
         version: 7.6.13

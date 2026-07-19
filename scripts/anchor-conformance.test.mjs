@@ -32,7 +32,7 @@ import { join } from 'node:path';
 import { spawnSync } from 'node:child_process';
 
 // impl-1 — the store's real verifier + fixture primitives (the SAME code the plugin
-// bundles). It is a build-only sibling (link:../qmd-team-intent-kb/...) that a fresh
+// bundles). It is a build-only sibling (link:../bobs-big-brain-registrar/...) that a fresh
 // plugin-only CI checkout STRIPS, so import it GUARDED: absent → the store cases skip
 // (never error). The dedicated `anchor-conformance` CI job provisions the sibling so
 // they run enforced there; a local dev checkout has the sibling and runs them too.

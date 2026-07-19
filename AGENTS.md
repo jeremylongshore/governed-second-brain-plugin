@@ -17,8 +17,8 @@ This is the *installable code*; the *landing/thesis* lives in the company umbrel
 | | Repo | Role |
 |---|---|---|
 | **This repo** | `jeremylongshore/bobs-big-brain-plugin` (personal, public) | the plugin: MCP runtime (local + team) + skills |
-| **Umbrella** | `intent-solutions-io/governed-second-brain` (company) | landing page, thesis, competitive teardown — points here |
-| **Engines** | `jeremylongshore/{intentional-cognition-os, qmd-team-intent-kb}` | ICO (compile) + INTKB (govern) — separate repos |
+| **Umbrella** | `intent-solutions-io/bobs-big-brain-umbrella` (company) | landing page, thesis, competitive teardown — points here |
+| **Engines** | `jeremylongshore/{bobs-big-brain-compiler, bobs-big-brain-registrar}` | Bob's Big Brain Compiler (compile) + Bob's Big Brain Registrar (govern) — separate repos |
 | **Team marketplace** | `intent-solutions-io/team-intent-claude-plugins` (private) | publishes **this** plugin (team mode) for the internal team |
 
 **The old standalone `intent-brain` plugin is RETIRED.** It used to live in
@@ -35,7 +35,7 @@ now ONE plugin for both local and team — do not resurrect a second one.
   **directly, in-process** (imports `@qmd-team-intent-kb/*` + `better-sqlite3`). Full tool surface (6):
   `brain_search` / `brain_status` / `brain_audit_verify` (read) + `brain_capture` / `brain_govern` /
   `brain_transition` (write).
-- **`src/remote-server.ts`** — TEAM mode. Proxies to the INTKB HTTP API (`apps/api`) over the network
+- **`src/remote-server.ts`** — TEAM mode. Proxies to the Registrar HTTP API (`apps/api`) over the network
   with a per-user bearer token. Tool surface (7): `brain_search` and auth-free `brain_status` reads;
   `brain_capture` proposals; `brain_inbox`, `brain_approve`, and `brain_reject` admin review; and
   `brain_transition` admin lifecycle changes. **No `brain_govern`** (govern runs server-side), and
@@ -68,7 +68,7 @@ behavior at runtime; a stray native import will break a marketplace install.
 - `plugin-runtime/governed-brain.cjs` — the built bundle (esbuild). **Committed** (a file-copy
   `/plugin install` runs it without a build). Rebuild + commit it with any `src/` change.
 
-### Team-mode server contract (INTKB `apps/api`)
+### Team-mode server contract (the Registrar's `apps/api`)
 - `POST /api/candidates` — member-allowed; body = a full `MemoryCandidate` built client-side (the
   server `safeParse`s with no defaults — provide every field, like `local-server.ts` does).
 - `POST /api/memories/:id/transition` — admin; body `{ to, reason, actor: <Author OBJECT>, supersededBy? }`
@@ -79,13 +79,13 @@ behavior at runtime; a stray native import will break a marketplace install.
 
 ## Building
 
-The local MCP runtime is **bundled from the sibling `../qmd-team-intent-kb` workspace** — esbuild
+The local MCP runtime is **bundled from the sibling `../bobs-big-brain-registrar` workspace** — esbuild
 **inlines** its compiled packages into the `.cjs` (bundle, don't publish). `package.json` link paths
-assume `../qmd-team-intent-kb` is a sibling checkout.
+assume `../bobs-big-brain-registrar` is a sibling checkout.
 
 ```bash
-pnpm -C ../qmd-team-intent-kb build   # refresh INTKB dist/ FIRST — the bundle inlines compiled JS; stale dist = stale bundle
-pnpm install                          # links the INTKB packages + zod/sdk/better-sqlite3
+pnpm -C ../bobs-big-brain-registrar build   # refresh the Registrar dist/ FIRST — the bundle inlines compiled JS; stale dist = stale bundle
+pnpm install                          # links the Registrar packages + zod/sdk/better-sqlite3
 pnpm typecheck                        # tsc --noEmit
 node build.mjs                        # → plugin-runtime/governed-brain.cjs (commit it)
 node smoke.mjs                        # LOCAL: capture→govern→search over MCP (isolated ~/.gsb-smoke); also asserts the seeded policy rejects a too-short capture
@@ -116,9 +116,9 @@ freshness/category rerank — zero ML, cited hits. (The fusion kills the keyword
 sqlite-vec **semantic** backend (EmbeddingGemma-300M, eval-gated, SHA-256-pinned weights) is
 **roadmapped, not shipped** — it builds only if the retrieval eval falls below the 0.85 Recall@10
 gate; qmd's 2.2 GB hybrid is skipped (heavier *and* unwired). Canonical record:
-`qmd-team-intent-kb/000-docs/038-AT-DECR`; epic `qmd-team-intent-kb-0t9`.
+`bobs-big-brain-registrar/000-docs/038-AT-DECR`; epic `qmd-team-intent-kb-0t9` (bead ID, unchanged by the repo rename).
 
 ## Tracking
 Program-level beads + the GitHub tracking issue live on the **umbrella** repo
-(`intent-solutions-io/governed-second-brain` — epic `compile-then-govern-qy7`, issue #1), not here.
+(`intent-solutions-io/bobs-big-brain-umbrella` — epic `compile-then-govern-qy7`, issue #1), not here.
 This repo is code; file code-anchored issues here and cross-reference the epic.

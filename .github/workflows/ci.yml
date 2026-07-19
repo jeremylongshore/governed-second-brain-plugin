@@ -2,7 +2,7 @@ name: CI
 
 # Lint + typecheck + unit tests for the plugin source, on every PR.
 #
-# The build-only devDeps are `link:../qmd-team-intent-kb/*` — the PRIVATE sibling
+# The build-only devDeps are `link:../bobs-big-brain-registrar/*` — the sibling
 # monorepo that does NOT exist in a fresh CI checkout (the same reason smoke.yml
 # never builds). So this workflow gates the surface reachable WITHOUT that monorepo:
 # eslint (parse-only, all src), a scoped typecheck of the two CI-safe modules, and
@@ -86,8 +86,8 @@ jobs:
       - name: Checkout the sibling store (public)
         uses: actions/checkout@v4
         with:
-          repository: jeremylongshore/qmd-team-intent-kb
-          path: qmd-team-intent-kb
+          repository: jeremylongshore/bobs-big-brain-registrar
+          path: bobs-big-brain-registrar
       - uses: pnpm/action-setup@v4
         with:
           # Pin explicitly — both repos live in subdirs, so there is no root
@@ -98,7 +98,7 @@ jobs:
         with:
           node-version: 20
       - name: Build the sibling store (tsc -b → the dist the plugin's link dep resolves to)
-        working-directory: qmd-team-intent-kb
+        working-directory: bobs-big-brain-registrar
         run: |
           pnpm install --frozen-lockfile
           pnpm build

@@ -11,14 +11,15 @@
       "role": "Claude Code + Cowork plugin \u2014 ONE plugin, two modes (local in-process stdio MCP read+write; team remote proxy over the tailnet, read+propose). Dispatched by TEAMKB_API_URL. Plus the npx installer."
     },
     "compile": {
-      "name": "intentional-cognition-os",
+      "name": "bobs-big-brain-compiler",
+      "npmPackage": "intentional-cognition-os",
       "version": "1.14.0",
       "registry": "npm",
       "optional": true,
       "role": "ICO \u2014 corpus -> governance spool (DeepSeek- or Anthropic-capable). The installer's --index-only mode skips it for a zero-egress build."
     },
     "govern": {
-      "name": "qmd-team-intent-kb",
+      "name": "bobs-big-brain-registrar",
       "version": "0.7.0",
       "commit": "ce15feb",
       "registry": "bundled",

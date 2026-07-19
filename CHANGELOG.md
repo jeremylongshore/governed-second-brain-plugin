@@ -8,6 +8,17 @@ installable Claude Code + Cowork plugin (a local stdio MCP server); the engines 
 
 ## [Unreleased]
 
+### Changed
+
+- **Engine repos renamed (2026-07-19).** The sibling engines moved to their public product names:
+  `jeremylongshore/qmd-team-intent-kb` → `jeremylongshore/bobs-big-brain-registrar` (govern) and
+  `jeremylongshore/intentional-cognition-os` → `jeremylongshore/bobs-big-brain-compiler` (compile).
+  Repointed here: the eight `link:../bobs-big-brain-registrar/*` build-only devDeps (+ lockfile
+  re-resolve), the `ci.yml` anchor-conformance sibling checkout, `bin/init.mjs`'s local-sibling ICO
+  CLI path, `gsb.lock.json` engine names, and docs/prose. **npm names are unchanged** — the published
+  `governed-second-brain` package, the `@qmd-team-intent-kb/*` package scope, and the
+  `npx intentional-cognition-os@^1.14.0` compile fallback all stay as-is.
+
 ## [1.2.0] - 2026-07-18
 
 ### Changed

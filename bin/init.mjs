@@ -200,11 +200,11 @@ async function buildBrain(folder, files, args) {
 // Resolve the ICO CLI: local sibling checkout first (built), then `ico` on PATH,
 // then npx. Full-compile drives it with ICO_PROVIDER=deepseek.
 function resolveIco() {
-  const sibling = resolve(PLUGIN_ROOT, '..', 'intentional-cognition-os', 'packages', 'cli', 'dist', 'index.js');
+  const sibling = resolve(PLUGIN_ROOT, '..', 'bobs-big-brain-compiler', 'packages', 'cli', 'dist', 'index.js');
   if (process.env.GSB_ICO_CLI && existsSync(process.env.GSB_ICO_CLI)) {
     return { cmd: 'node', base: [process.env.GSB_ICO_CLI], label: process.env.GSB_ICO_CLI };
   }
-  if (existsSync(sibling)) return { cmd: 'node', base: [sibling], label: '../intentional-cognition-os (local)' };
+  if (existsSync(sibling)) return { cmd: 'node', base: [sibling], label: '../bobs-big-brain-compiler (local)' };
   try {
     execFileSync('ico', ['--version'], { stdio: 'ignore' });
     return { cmd: 'ico', base: [], label: 'ico (PATH)' };

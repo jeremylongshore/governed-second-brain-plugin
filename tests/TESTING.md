@@ -8,7 +8,7 @@ bundle `plugin-runtime/governed-brain.cjs` (esbuild inlines the private packages
 
 ## The CI constraint (why not everything runs in plain CI)
 
-The build-only devDeps are `link:../qmd-team-intent-kb/*` — a **private sibling monorepo
+The build-only devDeps are `link:../bobs-big-brain-registrar/*` — a **sibling monorepo
 that does not exist in a fresh GitHub Actions checkout**. So `build` and the full
 `typecheck` cannot run in generic CI (same reason `smoke.yml` never builds). CI therefore
 gates the surface that is reachable **without** the sibling monorepo, and the full stack
@@ -51,7 +51,7 @@ never down.**
 ## Run it
 
 ```bash
-pnpm install            # from a checkout that is a sibling of qmd-team-intent-kb
+pnpm install            # from a checkout that is a sibling of bobs-big-brain-registrar
 pnpm lint
 pnpm typecheck:ci       # or: pnpm typecheck (full, needs the sibling monorepo)
 pnpm test:coverage
