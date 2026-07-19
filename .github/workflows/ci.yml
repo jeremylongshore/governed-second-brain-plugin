@@ -117,3 +117,11 @@ jobs:
       - name: Anchor-on-transition re-anchor (R3)
         working-directory: bobs-big-brain-plugin
         run: node --test scripts/anchor-on-transition.test.mjs
+
+      # R8: the 3-state brain_audit_verify honesty banner — a benign same-timestamp
+      # CHAIN_FORK must NOT surface a false "TAMPER" klaxon. Lives here (not in the
+      # zero-egress smoke job) because the test imports @qmd-team-intent-kb/store
+      # UNGUARDED — it needs the public sibling store this job provisions above.
+      - name: Audit-verify banner honesty (R8 — 3-state, no false klaxon)
+        working-directory: bobs-big-brain-plugin
+        run: node --test smoke/audit-verify-banner.test.mjs
