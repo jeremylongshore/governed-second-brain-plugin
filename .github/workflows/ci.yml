@@ -111,3 +111,17 @@ jobs:
           out=$(node --test scripts/anchor-conformance.test.mjs 2>&1) || { echo "$out"; exit 1; }
           echo "$out" | tail -12
           echo "$out" | grep -q '# skipped 0' || { echo "::error::conformance store cases SKIPPED — the sibling store was not provisioned"; exit 1; }
+      # R3: re-anchor after brain_transition. esbuild-transpiles src/anchor.ts, so it
+      # needs the public sibling checked out + the plugin pnpm-installed — both already
+      # done above in this job. Mirrors the anchor-conformance invocation exactly.
+      - name: Anchor-on-transition re-anchor (R3)
+        working-directory: bobs-big-brain-plugin
+        run: node --test scripts/anchor-on-transition.test.mjs
+
+      # R8: the 3-state brain_audit_verify honesty banner — a benign same-timestamp
+      # CHAIN_FORK must NOT surface a false "TAMPER" klaxon. Lives here (not in the
+      # zero-egress smoke job) because the test imports @qmd-team-intent-kb/store
+      # UNGUARDED — it needs the public sibling store this job provisions above.
+      - name: Audit-verify banner honesty (R8 — 3-state, no false klaxon)
+        working-directory: bobs-big-brain-plugin
+        run: node --test smoke/audit-verify-banner.test.mjs
