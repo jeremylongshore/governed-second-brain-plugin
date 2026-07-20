@@ -122,7 +122,7 @@ as channel `unattested` (backward compatibility with every pre-H1 capture/spool)
   The local govern pass verifies with the same file. **Channel attestation is OUT OF SCOPE in local
   mode (v1):** the box is one trust domain — any process that can read the secret can claim any
   channel, so the channel value is self-asserted. Canonical decision record: the Registrar's
-  `000-docs/046-AT-DECR-write-time-provenance-origin-tokens.md`.
+  `000-docs/049-AT-DECR-write-time-provenance-origin-tokens.md`.
 - **Team mode** (`remote-server.ts`): mints ONLY when the admin explicitly distributed
   `TEAMKB_ORIGIN_SECRET` (env; never a file fallback, never auto-generated — a client-invented secret
   would mint tokens the server rejects at promotion). Channel `team-mcp`, checked against the server's

@@ -377,7 +377,7 @@ server.tool(
     // Best-effort: an unwritable base dir degrades to an UNATTESTED capture
     // (governs exactly like a pre-H1 candidate) rather than losing the capture.
     // Channel `local-mcp` is self-asserted — local mode is one trust domain
-    // (H4; see the Registrar's 046-AT-DECR).
+    // (H4; see the Registrar's 049-AT-DECR).
     let origin: MemoryCandidate['origin'];
     try {
       const secret = loadOrCreateOriginSecret(config.basePath);
