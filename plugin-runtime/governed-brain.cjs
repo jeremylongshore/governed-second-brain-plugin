@@ -36702,6 +36702,9 @@ var init_memory_candidate = __esm({
       channel: OriginChannel,
       /** When the token was minted (ISO-8601). Informational; the HMAC binds `capturedAt`, not this. */
       mintedAt: IsoDatetime
+    }).refine((o) => o.channel !== "unattested", {
+      message: "origin.channel 'unattested' is reserved receipt vocabulary for candidates without an origin \u2014 a client cannot claim it",
+      path: ["channel"]
     });
     MemoryCandidate = import_zod5.z.object({
       schemaVersion: import_zod5.z.literal(MEMORY_CANDIDATE_SCHEMA_VERSION).default(MEMORY_CANDIDATE_SCHEMA_VERSION),
@@ -37066,24 +37069,41 @@ function loadOriginSecret(basePath) {
   const env = process.env[ORIGIN_SECRET_ENV]?.trim();
   if (env !== void 0 && env.length > 0)
     return env;
+  const path = originSecretPath(basePath);
   try {
-    const secret = (0, import_node_fs3.readFileSync)(originSecretPath(basePath), "utf8").trim();
-    return secret.length > 0 ? secret : void 0;
+    const secret = (0, import_node_fs3.readFileSync)(path, "utf8").trim();
+    if (secret.length === 0)
+      return void 0;
+    try {
+      if (((0, import_node_fs3.statSync)(path).mode & 511) !== 384)
+        (0, import_node_fs3.chmodSync)(path, 384);
+    } catch {
+    }
+    return secret;
   } catch {
     return void 0;
   }
 }
 function loadOrCreateOriginSecret(basePath) {
-  const existing = loadOriginSecret(basePath);
-  if (existing !== void 0)
-    return existing;
+  const env = process.env[ORIGIN_SECRET_ENV]?.trim();
+  if (env !== void 0 && env.length > 0)
+    return env;
   const path = originSecretPath(basePath);
-  const secret = (0, import_node_crypto4.randomBytes)(32).toString("hex");
+  const minted = (0, import_node_crypto4.randomBytes)(32).toString("hex");
   (0, import_node_fs3.mkdirSync)((0, import_node_path5.dirname)(path), { recursive: true });
-  (0, import_node_fs3.writeFileSync)(path, `${secret}
-`, { encoding: "utf8", mode: 384 });
-  (0, import_node_fs3.chmodSync)(path, 384);
-  return secret;
+  try {
+    (0, import_node_fs3.writeFileSync)(path, `${minted}
+`, { encoding: "utf8", flag: "wx", mode: 384 });
+    return minted;
+  } catch (e) {
+    if (e.code !== "EEXIST")
+      throw e;
+  }
+  const existing = loadOriginSecret(basePath);
+  if (existing === void 0) {
+    throw new Error(`origin secret file exists but is empty or unreadable: ${path} \u2014 refusing to overwrite a concurrent writer; inspect/remove it and retry`);
+  }
+  return existing;
 }
 function originSecretPath(basePath) {
   return (0, import_node_path5.join)(basePath ?? getTeamKbBasePath(), ORIGIN_SECRET_FILENAME);

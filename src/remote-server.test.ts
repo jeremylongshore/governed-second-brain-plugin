@@ -589,3 +589,31 @@ describe('origin tokens — H1 write-time provenance (team capture)', () => {
     expect(String(out['error'])).toMatch(/not an authorized capture channel/);
   });
 });
+
+describe('origin tokens — byte-equality with the Registrar helper (frozen vector)', () => {
+  it('mints the exact HMAC the Registrar mintOriginToken produces for a frozen known vector', async () => {
+    // FROZEN KNOWN VECTOR — generated ONCE from the Registrar's
+    // @qmd-team-intent-kb/common mintOriginToken (packages/common/src/
+    // origin-token.ts, branch feat/h1-h5-origin-token-schema) via:
+    //   mintOriginToken('9f'.repeat(32), {
+    //     candidateId: '0f0e0d0c-0b0a-5910-8807-060504030201',
+    //     tenantId: 'vector-tenant',
+    //     capturedAt: '2026-07-19T12:34:56.789Z',
+    //   })
+    // and frozen here. If this test ever fails, the plugin's hand-rolled
+    // team-mode mint has drifted from the Registrar's canonical derivation
+    // (NUL-joined (candidateId, tenantId, capturedAt), HMAC-SHA256, lowercase
+    // hex) — the server would reject every token this client mints. Fix the
+    // mint, never the vector.
+    const EXPECTED = '40dc2c6e3284e4c8ecf5bb5f10eaa0195c6491e33877dd1cb7d6d2435fb85ef4';
+    const { mintOriginToken } = await load();
+    expect(
+      mintOriginToken(
+        '9f'.repeat(32),
+        '0f0e0d0c-0b0a-5910-8807-060504030201',
+        'vector-tenant',
+        '2026-07-19T12:34:56.789Z',
+      ),
+    ).toBe(EXPECTED);
+  });
+});
